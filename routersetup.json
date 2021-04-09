@@ -1,5 +1,5 @@
 {
   'router-id': 1
-  input-ports:[]
-  output-ports:[]
+  'input-ports':[]
+  'output-ports':[]
 }

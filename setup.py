@@ -1,36 +1,25 @@
 import json
 import sys
 
-def getConfigFiles():
-    configFileNames = []
-  try:
-      for fileNumber in (1,len(sys.argv)-1):
-        configFileNames.append = sys.argv[fileNumber];
-    return configFileNames
-  except:
-    print("An error occured with the input")
-    return False
-
-
-def configFileCheck(configFileNames):
+def getConfigFile():
+    configFileName = ''
     try:
-        for file in configFileNames:
-            with open(file) as jsonFile:
-                data = json.load(jsonFile)
-                routerId = data['router-id']
-                if (routerId >= 0 and routerId <= 64000):
-                    return True
-                else:
-                    return False
+        #gets the second argument from the command line which is the config file
+        configFileName.append = sys.argv[1];
+        return configFileName
     except:
-        print('An error occured with loading the config file')
+        print('An error occured with the input')
 
-def outputRouterList(configFileName):
+
+def getRouterData(configFileName):
+    '''returns router id, inputPorts and outputPorts from config file'''
     try:
+        #opens file specified and imports all the data transforming it into a python dictionary from a json file
         with open(configFileName) as jsonFile:
             data = json.load(jsonFile)
-            inputRouters = data['input-routers']
-            outputRouters = data['output-routers']
-            return (inputRouters, outputRouters)
+            routerId = data['router-id']
+            inputPorts = data['input-ports']
+            outputPorts = data['output-ports']
+            return (routerId, inputPorts, outputPorts)
     except:
         print('An error occured with loading the config file')
