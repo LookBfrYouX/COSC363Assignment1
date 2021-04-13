@@ -1,31 +1,46 @@
+import json
+
 # Length Constants
-MIN_LENGTH_PACKET = 5 # Require Command, Version, and Router-Id fields with at least one RIP entry.
-MAX_LENGTH_PACKET = 29 # Require Command, Version, and Router-Id fields with up to 25 RIP entries.
+MIN_LENGTH_PACKET = 4  # Require Command, Version, and Router-Id fields with at least one RIP entry.
+MAX_LENGTH_PACKET = 28  # Require Command, Version, and Router-Id fields with up to 25 RIP entries.
 
-# Constants used to index parts of the common header of a RIP packet.
-COMMAND = 0
-VERSION = 1
-SOURCE_ROUTER_ID_B1 = 2
-SOURCE_ROUTER_ID_B2 = 3
-START_OF_RIP_ENTRIES = 4
-
-# Constants used to index parts of a RIP entry.
-DESTINATION_ROUTER_ID_B1 = 0
-DESTINATION_ROUTER_ID_B2 = 1
-DESTINATION_ROUTER_ID_B3 = 2
-DESTINATION_ROUTER_ID_B4 = 3
-METRIC_B1 = 4
-METRIC_B2 = 5
-METRIC_B3 = 6
-METRIC_B4 = 7
+ENTRY_INDEX = 3  # "Initial" index of entries
 
 
 def create_response_packet():
-    return
+    """Creates a RIP response packet based on the specifications."""
+    response_packet = dict()
+
+    response_packet['command'] = 2
+    response_packet['version'] = 2
+    # response_packet['router_id'] = this.router_id
+
+    # entry_number = 1
+    # for entry in this.routing_table:
+    #     entry_access = "entry" + str(entry_number)
+    #     response_packet[entry_access] = entry
+    #
+    return response_packet
 
 
-def read_response_packet():
-    return
+def read_response_packet(packet):
+    """Reads a RIP response packet and adds/updates RIP entries in routing table."""
+    valid_packet, error_msg = validate_response_packet(packet)
+
+    # Routing update arrives from a neighbor G', add the cost associated with the network that is shared with G'.(This
+    # should be the network over which the update arrived.) Call the resulting distance D'. Compare the resulting
+    # distances with the current routing table entries. If the new distance D' for N is smaller than the existing
+    # value D, adopt the new route.That is, change the table entry for N to have metric D' and router G'.If G'
+    # is the router from which the existing route came, i.e., G' = G, then use the new metric
+    # even if it is larger than the old one.
+
+    if valid_packet:
+        # Update routing table
+        # if metric is smaller take that
+        return
+    else:
+        print(error_msg)
+        return
 
 
 def validate_response_packet(packet):
@@ -52,16 +67,17 @@ def validate_response_packet(packet):
     if (len(packet) < MIN_LENGTH_PACKET) or (len(packet) > MAX_LENGTH_PACKET):
         valid_packet = False
         error_msg = "The RIP packet does not contain the required fields or contains additional fields."
-    elif packet[COMMAND] != 0x02:
+    elif packet['command'] != 2:
         valid_packet = False
         error_msg = "The command field of the packet is incorrect."
-    elif packet[VERSION] != 0x02:
+    elif packet['version'] != 2:
         valid_packet = False
         error_msg = "The version field of the packet is incorrect."
     else:
-        for entry in range(START_OF_RIP_ENTRIES, len(packet)):
+        for i in range(ENTRY_INDEX, len(packet)):
             # TODO add additional checks for content of RIP entry (optional)
-            if packet[entry][METRIC_B1] < 0x01 or packet[entry][METRIC_B1] > 0x10:
+            entry = "entry" + str(i - 2)
+            if packet[entry]['metric'] < 1 or packet[entry]['metric'] > 16:
                 valid_packet = False
                 error_msg = "The metric for a RIP entry is invalid"
                 break
@@ -70,3 +86,22 @@ def validate_response_packet(packet):
                 error_msg = ""
 
     return valid_packet, error_msg
+
+
+def create_initial_routing_table():
+    # Table with an entry for every possible destination in the system. The
+    # entry contains the distance D to the destination, and the first router G on the
+    # route to that network.
+    return
+
+
+def main():
+    packet = {'command': 2, 'version': 2, 'router_id': 100, 'entry1': {'router_id': 10, 'metric': 11}}
+    validate_response_packet(packet)
+
+    # Periodically, send a routing update to every neighbor.The update is a set of messages that contain all
+    # of the information from the routing table. It contains an entry for each destination, with the
+    # distance shown to that destination.
+
+
+main()
