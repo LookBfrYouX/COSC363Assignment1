@@ -15,6 +15,10 @@ def create_response_packet():
     response_packet['version'] = 2
     # response_packet['router_id'] = this.router_id
 
+    # routes learned from one neighbor in updates
+    # sent to that neighbor. "Split horizon with poisoned reverse"
+    # includes such routes in updates, but sets their metrics to infinity.
+
     # entry_number = 1
     # for entry in this.routing_table:
     #     entry_access = "entry" + str(entry_number)
@@ -92,6 +96,14 @@ def create_initial_routing_table():
     # Table with an entry for every possible destination in the system. The
     # entry contains the distance D to the destination, and the first router G on the
     # route to that network.
+
+    # - Router-id of destination
+    # - Metric represents total cost of getting a datagram from the router to that destination. This metric is the
+    # sum of the costs associated with the networks that would be traversed to get to the destination.
+    # - Router-id of next router along the path to the destination (i.e., the next hop).
+    # If the destination is on one of the directly-connected networks, this item is not needed.
+    # - A flag to indicate that information about the route has changed recently.This will be referred to as the
+    # "route change flag."
     return
 
 
