@@ -30,7 +30,7 @@ def create_response_packet():
 def read_response_packet(packet):
     """Reads a RIP response packet and adds/updates RIP entries in routing table."""
     valid_packet, error_msg = validate_response_packet(packet)
-
+    # if error msg, print and discard packet
     # Routing update arrives from a neighbor G', add the cost associated with the network that is shared with G'.(This
     # should be the network over which the update arrived.) Call the resulting distance D'. Compare the resulting
     # distances with the current routing table entries. If the new distance D' for N is smaller than the existing
@@ -92,7 +92,7 @@ def validate_response_packet(packet):
     return valid_packet, error_msg
 
 
-def create_initial_routing_table():
+def update_routing_table():
     # Table with an entry for every possible destination in the system. The
     # entry contains the distance D to the destination, and the first router G on the
     # route to that network.
