@@ -76,8 +76,9 @@ class Router:
         """
         for packet in setup_packets:
             router_id = packet['router_id']
-            self.routing_table[router_id] = {'destination_router-id': router_id, 'metric': 1,
-                                             'next_router_id': "", 'flag': True}
+            entry_number = len(self.routing_table)
+            self.routing_table[entry_number] = {'destination_router-id': router_id, 'metric': 1,
+                                                'next_router_id': "", 'flag': True}
 
     def create_setup_response_packet(self):
         """Create a RIP response packet that will be used for setup."""
@@ -125,13 +126,22 @@ class Router:
         # even if it is larger than the old one.
 
         if self.valid_packet:
+            entry_number = 1
+            for entry in self.routing_table:
+                entry_access = "entry" + str(entry_number)
+                if entry['destination_router_id'] == packet[entry_access]['router_id']:
+                    break
+                # if entry id and metric < packet id and metric + 1, else if entry-id =
+                entry_number += 1
             # Update routing table
-            # if metric is smaller take that
             return
         else:
             print(self.error_msg)
             print("Discarding packet...")
             return
+
+    def update_routing_table(self):
+        return self.routing_table
 
 
 config = setup.get_config_file()
