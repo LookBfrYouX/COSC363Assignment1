@@ -87,16 +87,16 @@ class Router:
         self.response_packet['router_id'] = self.router_id
 
         entry_number = 1
-        for entry in self.routing_table:
+        for entry, data in self.routing_table.items():
             # Routes learnt from neighbor included in updates sent to that neighbor.
             # "Split horizon with poisoned reverse" is used.
             # TODO this will probably have to be changed, because self.destination_router_id is not updated,
             #  maybe pass in destination_router_id.
-            if entry['next_router_id'] == self.destination_router_id:
+            if data['next_router_id'] == self.destination_router_id:
                 # Sets their metrics to "infinity"/unreachable as required by "Split horizon with poisoned reverse"
-                entry['metric'] = 16
+                data['metric'] = 16
             entry_access = "entry" + str(entry_number)
-            self.response_packet[entry_access] = entry
+            self.response_packet[entry_access] = data
             entry_number += 1
 
         return self.response_packet
@@ -135,9 +135,6 @@ class Router:
             print(self.error_msg)
             print("Discarding packet...")
             return
-
-    def update_routing_table(self):
-        return self.routing_table
 
     def add_routing_table_entry(self, packet, entry_access):
         destination_router = packet[entry_access]['router_id']
