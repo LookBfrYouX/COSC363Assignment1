@@ -61,10 +61,11 @@ class Router:
                     self.valid_packet = True
                     self.error_msg = ""
 
-    def populate_routing_table(self, setup_packets):
+    def populate_routing_table(self):
         """
         Sets up the initial routing table for the router.
-        These are the direct connections to the router and will have a metric of 1.
+        This table will only contain an entry for itself, so when the first update event occurs,
+        it can be used by other routers to establish direct connections.
 
         Routing Table Entry:
 
@@ -74,22 +75,8 @@ class Router:
         empty string if directly connected (in our setup).
         - flag, indicates whether the route has changed recently. (True or False)
         """
-        for packet in setup_packets:
-            router_id = packet['router_id']
-            entry_number = len(self.routing_table)
-            self.routing_table[entry_number] = {'destination_router-id': router_id, 'metric': 1,
-                                                'next_router_id': "", 'flag': True}
-
-    def create_setup_response_packet(self):
-        """Create a RIP response packet that will be used for setup."""
-        self.response_packet = dict()
-
-        self.response_packet['command'] = 2
-        self.response_packet['version'] = 2
-        self.response_packet['router_id'] = self.router_id
-        self.response_packet['entry1'] = {self.router_id, 0}  # Metric is zero because router is connected to its self.
-
-        return self.response_packet
+        self.routing_table[0] = {'destination_router-id': self.router_id, 'metric': 0,
+                                 'next_router_id': "", 'flag': True}
 
     def create_response_packet(self):
         """Creates a RIP response packet based on the specifications."""
@@ -115,7 +102,9 @@ class Router:
         return self.response_packet
 
     def read_response_packet(self, packet):
-        """Reads a RIP response packet and calls function to add/update RIP entries in routing table."""
+        """Reads a RIP response packet and updates RIP entries in routing table. If no RIP entry exists then
+        a function is called to add that RIP entry to the routing table.
+        """
         self.validate_response_packet(packet)
         distance = 1
         # Routing update arrives from a neighbor G', add the cost associated with the network that is shared with G'.
@@ -127,13 +116,20 @@ class Router:
 
         if self.valid_packet:
             entry_number = 1
-            for entry in self.routing_table:
+            found = False
+            for entry, data in self.routing_table.items():
                 entry_access = "entry" + str(entry_number)
-                if entry['destination_router_id'] == packet[entry_access]['router_id']:
+                if data['destination_router_id'] == packet[entry_access]['router_id']:
+                    if (packet[entry_access]['metric'] + 1) < data['metric']:
+                        # Update routing table
+                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + 1
+                        self.routing_table[entry]['next_router_id'] = packet['router_id']
+                        self.routing_table[entry]['flag'] = True
+                        break
                     break
-                # if entry id and metric < packet id and metric + 1, else if entry-id =
                 entry_number += 1
-            # Update routing table
+            if not found:
+                self.add_routing_table_entry(packet, entry_access)
             return
         else:
             print(self.error_msg)
@@ -142,6 +138,15 @@ class Router:
 
     def update_routing_table(self):
         return self.routing_table
+
+    def add_routing_table_entry(self, packet, entry_access):
+        destination_router = packet[entry_access]['router_id']
+        next_router = packet['router_id']
+        distance = packet[entry_access]['metric'] + 1  # Add one since that is metric from this router to neighbour.
+
+        entry = len(self.routing_table)
+        self.routing_table[entry] = {'destination_router-id': destination_router, 'metric': distance,
+                                     'next_router_id': next_router, 'flag': True}
 
 
 config = setup.get_config_file()
