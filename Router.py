@@ -106,13 +106,6 @@ class Router:
         a function is called to add that RIP entry to the routing table.
         """
         self.validate_response_packet(packet)
-        distance = 1
-        # Routing update arrives from a neighbor G', add the cost associated with the network that is shared with G'.
-        # (This should be the network over which the update arrived.) Call the resulting distance D'.
-        # Compare the resulting distances with the current routing table entries. If the new distance D' for N is
-        # smaller than the existing value D, adopt the new route.That is, change the table entry for N to have metric D'
-        # and router G'.If G' is the router from which the existing route came, i.e., G' = G, then use the new metric
-        # even if it is larger than the old one.
 
         if self.valid_packet:
             entry_number = 1
@@ -120,13 +113,20 @@ class Router:
             for entry, data in self.routing_table.items():
                 entry_access = "entry" + str(entry_number)
                 if data['destination_router_id'] == packet[entry_access]['router_id']:
+                    # If the new distance is smaller than the existing value, adopt the new route.
                     if (packet[entry_access]['metric'] + 1) < data['metric']:
                         # Update routing table
                         self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + 1
                         self.routing_table[entry]['next_router_id'] = packet['router_id']
                         self.routing_table[entry]['flag'] = True
                         break
-                    break
+                    # If the router from which the existing route came, then use the new metric
+                    # even if it is larger than the old one.
+                    elif data['next_router_id'] == packet['router_id']:
+                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + 1
+                        self.routing_table[entry]['flag'] = True
+                    else:
+                        break
                 entry_number += 1
             if not found:
                 self.add_routing_table_entry(packet, entry_access)
