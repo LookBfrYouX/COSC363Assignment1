@@ -1,6 +1,3 @@
-import setup
-import json
-
 # Length Constants
 MIN_LENGTH_PACKET = 4  # Require Command, Version, and Router-Id fields with at least one RIP entry.
 MAX_LENGTH_PACKET = 28  # Require Command, Version, and Router-Id fields with up to 25 RIP entries.
@@ -108,6 +105,11 @@ class Router:
         self.validate_response_packet(packet)
 
         if self.valid_packet:
+            distance_to_next_hop = 0
+            for entry_next_hop, data_next_hop in self.routing_table.items():
+                if data_next_hop['destination_router_id'] == packet['router_id']:
+                    distance_to_next_hop = data_next_hop['metric']
+
             entry_number = 1
             found = False
             for entry, data in self.routing_table.items():
@@ -116,36 +118,41 @@ class Router:
                     # If the new distance is smaller than the existing value, adopt the new route.
                     if (packet[entry_access]['metric'] + 1) < data['metric']:
                         # Update routing table
-                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + 1
+                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + distance_to_next_hop
                         self.routing_table[entry]['next_router_id'] = packet['router_id']
                         self.routing_table[entry]['flag'] = True
                         break
                     # If the router from which the existing route came, then use the new metric
                     # even if it is larger than the old one.
                     elif data['next_router_id'] == packet['router_id']:
-                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + 1
+                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + distance_to_next_hop
                         self.routing_table[entry]['flag'] = True
                     else:
                         break
                 entry_number += 1
             if not found:
-                self.add_routing_table_entry(packet, entry_access)
+                self.add_routing_table_entry(packet, entry_access, distance_to_next_hop)
             return
         else:
             print(self.error_msg)
             print("Discarding packet...")
             return
 
-    def add_routing_table_entry(self, packet, entry_access):
+    def add_routing_table_entry(self, packet, entry_access, distance_to_next_hop):
         destination_router = packet[entry_access]['router_id']
         next_router = packet['router_id']
-        distance = packet[entry_access]['metric'] + 1  # Add one since that is metric from this router to neighbour.
+        distance = packet[entry_access]['metric'] + distance_to_next_hop
 
         entry = len(self.routing_table)
         self.routing_table[entry] = {'destination_router-id': destination_router, 'metric': distance,
                                      'next_router_id': next_router, 'flag': True}
 
-
-config = setup.get_config_file()
-data_from_config = setup.get_router_data(config)
-router1 = Router(data_from_config)
+    def __str__(self):
+        """Returns the formatted string represent of the Router's routing table"""
+        string = "Routing Table: \n" \
+                 " \n" \
+                 "Destination Metric Next Hop \n"
+        for entry, data in self.routing_table.items():
+            string += "{0} {1} {2} \n"
+            string.format(data['destination_router_id'], data['metric'], data['next_router_id'])
+        return string
