@@ -6,7 +6,7 @@ ENTRY_INDEX = 3  # "Initial" index of entries
 
 
 class Router:
-    def __init__(self, data):
+    def __init__(self, data, sockets):
         self.router_id = data[0]
         self.input_ports = data[1]
         self.output_ports = data[2]
@@ -14,7 +14,7 @@ class Router:
         self.error_msg = ""
         self.routing_table = dict()
         self.response_packet = dict()
-        self.destination_router_id = ""
+        self.sockets = sockets
 
     def validate_response_packet(self, packet):
         """
@@ -75,7 +75,7 @@ class Router:
         self.routing_table[0] = {'destination_router-id': self.router_id, 'metric': 0,
                                  'next_router_id': "", 'flag': True}
 
-    def create_response_packet(self):
+    def create_response_packet(self, destination_router_id):
         """Creates a RIP response packet based on the specifications."""
         self.response_packet = dict()
 
@@ -89,7 +89,7 @@ class Router:
             # "Split horizon with poisoned reverse" is used.
             # TODO this will probably have to be changed, because self.destination_router_id is not updated,
             #  maybe pass in destination_router_id.
-            if data['next_router_id'] == self.destination_router_id:
+            if data['next_router_id'] == destination_router_id:
                 # Sets their metrics to "infinity"/unreachable as required by "Split horizon with poisoned reverse"
                 data['metric'] = 16
             entry_access = "entry" + str(entry_number)
