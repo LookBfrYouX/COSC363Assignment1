@@ -72,8 +72,13 @@ class Router:
         empty string if directly connected (in our setup).
         - flag, indicates whether the route has changed recently. (True or False)
         """
-        self.routing_table[0] = {'destination_router-id': self.router_id, 'metric': 0,
-                                 'next_router_id': "", 'flag': True}
+        entry_number = 0
+        for port in self.output_ports:
+            metric = port[1]
+            destination = port[2]
+            self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': metric,
+                                                'next_router_id': "", 'flag': True}
+            entry_number += 1
 
     def create_response_packet(self, destination_router_id):
         """Creates a RIP response packet based on the specifications."""
