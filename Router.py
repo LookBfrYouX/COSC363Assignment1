@@ -58,28 +58,6 @@ class Router:
                     self.valid_packet = True
                     self.error_msg = ""
 
-    def populate_routing_table(self):
-        """
-        Sets up the initial routing table for the router.
-        This table will only contain an entry for itself, so when the first update event occurs,
-        it can be used by other routers to establish direct connections.
-
-        Routing Table Entry:
-
-        - destination_router-id, the router id of the destination.
-        - metric, cost of sending datagram from router to destination.
-        - next_router_id, the router id of the next router along the path to the destination,
-        empty string if directly connected (in our setup).
-        - flag, indicates whether the route has changed recently. (True or False)
-        """
-        entry_number = 0
-        for port in self.output_ports:
-            metric = port[1]
-            destination = port[2]
-            self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': metric,
-                                                'next_router_id': "", 'flag': True}
-            entry_number += 1
-
     def create_response_packet(self, destination_router_id):
         """Creates a RIP response packet based on the specifications."""
         self.response_packet = dict()
@@ -87,6 +65,11 @@ class Router:
         self.response_packet['command'] = 2
         self.response_packet['version'] = 2
         self.response_packet['router_id'] = self.router_id
+
+        # Consider setup when initial routing table is empty.
+        if len(self.rotuing_table) == 0:
+            self.response_packet["entry1"] = dict()  # empty
+            return self.response_packet
 
         entry_number = 1
         for entry, data in self.routing_table.items():
@@ -110,10 +93,22 @@ class Router:
         self.validate_response_packet(packet)
 
         if self.valid_packet:
+            # Consider setup when initial routing table is empty.
+            if len(packet["entry1"]) == 0:
+                self.add_neighbour(packet)  # empty
+                return
+
             distance_to_next_hop = 0
             for entry_next_hop, data_next_hop in self.routing_table.items():
                 if data_next_hop['destination_router_id'] == packet['router_id']:
                     distance_to_next_hop = data_next_hop['metric']
+                    break
+                else:
+                    # Received a packet from a router that is a neighbour to this router,
+                    # which hasn't been added to the routing table of this router.
+                    # Add router to this routing table, and receive metric.
+                    distance_to_next_hop = self.add_neighbour(packet)
+                    break
 
             entry_number = 1
             found = False
@@ -144,6 +139,17 @@ class Router:
             return
 
     def add_routing_table_entry(self, packet, entry_access, distance_to_next_hop):
+        """
+        Adds an entry to routing table for the router.
+
+        Routing Table Entry:
+
+        - destination_router-id, the router id of the destination.
+        - metric, cost of sending datagram from router to destination.
+        - next_router_id, the router id of the next router along the path to the destination,
+        empty string if directly connected (in our setup).
+        - flag, indicates whether the route has changed recently. (True or False)
+        """
         destination_router = packet[entry_access]['router_id']
         next_router = packet['router_id']
         distance = packet[entry_access]['metric'] + distance_to_next_hop
@@ -151,6 +157,21 @@ class Router:
         entry = len(self.routing_table)
         self.routing_table[entry] = {'destination_router-id': destination_router, 'metric': distance,
                                      'next_router_id': next_router, 'flag': True}
+
+    def add_neighbour(self, packet):
+        """During initial setup if this router receives an empty entry from another,
+        router this means that it is a neighbour (i.e. directly connect). The directly connect neighbour is then
+        added to the routing table of this router."""
+        for port in self.output_ports:
+            metric = port[1]
+            destination = port[2]
+
+            entry_number = len(self.routing_table)
+            if packet['router_id'] == destination:
+                self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': metric,
+                                                    'next_router_id': "", 'flag': True}
+                return metric
+        return 0
 
     def __str__(self):
         """Returns the formatted string represent of the Router's routing table"""
