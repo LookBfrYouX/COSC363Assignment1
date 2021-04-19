@@ -1,3 +1,12 @@
+import setup
+import json
+import socket
+import select
+import sys
+
+BUFFER_SIZE = 1024
+HOST = "127.0.0.1"
+
 # Length Constants
 MIN_LENGTH_PACKET = 4  # Require Command, Version, and Router-Id fields with at least one RIP entry.
 MAX_LENGTH_PACKET = 28  # Require Command, Version, and Router-Id fields with up to 25 RIP entries.
@@ -67,7 +76,7 @@ class Router:
         self.response_packet['router_id'] = self.router_id
 
         # Consider setup when initial routing table is empty.
-        if len(self.rotuing_table) == 0:
+        if len(self.routing_table) == 0:
             self.response_packet["entry1"] = dict()  # empty
             return self.response_packet
 
@@ -180,3 +189,47 @@ class Router:
             string += "{0} {1} {2} \n"
             string.format(data['destination_router_id'], data['metric'], data['next_router_id'])
         return string
+
+
+def main():
+    config = setup.get_config_file()
+    data_from_config = setup.get_router_data(config)
+    input_ports = data_from_config[1]
+    sockets = []
+
+    # Create datagram sockets for each port.
+    # Bind sockets to each port.
+    for port in input_ports:
+        try:
+            port_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+            port_socket.bind((HOST, int(port)))
+            sockets.append(port_socket)
+        except OSError:
+            print("Port already in use. Terminating...")
+            sys.exit()
+
+    router = Router(data_from_config, sockets)
+
+    while True:
+
+        readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
+
+        for readable_socket in readable:
+            temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
+            response_packet = json.loads(temporary_storage.decode('utf-8'))
+            router.read_response_packet(response_packet)
+            # Print the routing table to command line to see the changes that occur when receiving a response packet.
+            print(router)
+
+        for port in router.output_ports:
+            port_number = port[0]
+            destination_router_id = port[2]
+            if len(writeable) > 0:  # At least one socket is free to send a response packet
+                writeable_socket = writeable[0]  # doesn't matter what socket is used to send, so select first one.
+                response_packet = router.create_response_packet(destination_router_id)
+                response_packet_bytes = json.dumps(response_packet).encode('utf-8')
+                print(response_packet_bytes)
+                writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
+
+
+main()

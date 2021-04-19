@@ -1,0 +1,5 @@
+{
+  "router-id": "2",
+  "input-ports": "4003, 4004",
+  "output-ports": "4000-1-1, 4005-3-3"
+}
