@@ -75,8 +75,6 @@ class Router:
         for entry, data in self.routing_table.items():
             # Routes learnt from neighbor included in updates sent to that neighbor.
             # "Split horizon with poisoned reverse" is used.
-            # TODO this will probably have to be changed, because self.destination_router_id is not updated,
-            #  maybe pass in destination_router_id.
             if data['next_router_id'] == destination_router_id:
                 # Sets their metrics to "infinity"/unreachable as required by "Split horizon with poisoned reverse"
                 data['metric'] = 16
@@ -116,7 +114,7 @@ class Router:
                 entry_access = "entry" + str(entry_number)
                 if data['destination_router_id'] == packet[entry_access]['router_id']:
                     # If the new distance is smaller than the existing value, adopt the new route.
-                    if (packet[entry_access]['metric'] + 1) < data['metric']:
+                    if (packet[entry_access]['metric'] + distance_to_next_hop) < data['metric']:
                         # Update routing table
                         self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + distance_to_next_hop
                         self.routing_table[entry]['next_router_id'] = packet['router_id']
@@ -155,7 +153,7 @@ class Router:
         distance = packet[entry_access]['metric'] + distance_to_next_hop
 
         entry = len(self.routing_table)
-        self.routing_table[entry] = {'destination_router-id': destination_router, 'metric': distance,
+        self.routing_table[entry] = {'destination_router-id': destination_router, 'metric': int(distance),
                                      'next_router_id': next_router, 'flag': True}
 
     def add_neighbour(self, packet):
@@ -168,7 +166,7 @@ class Router:
 
             entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
-                self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': metric,
+                self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': int(metric),
                                                     'next_router_id': "", 'flag': True}
                 return metric
         return 0
@@ -177,7 +175,7 @@ class Router:
         """Returns the formatted string represent of the Router's routing table"""
         string = "Routing Table: \n" \
                  " \n" \
-                 "Destination Metric Next Hop \n"
+                 "Destination Metric Next-Hop \n"
         for entry, data in self.routing_table.items():
             string += "{0} {1} {2} \n"
             string.format(data['destination_router_id'], data['metric'], data['next_router_id'])

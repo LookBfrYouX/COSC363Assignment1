@@ -11,6 +11,7 @@ def main():
     # TODO bind sockets
     config = setup.get_config_file()
     data_from_config = setup.get_router_data(config)
+    print(data_from_config)
     sockets = []
     router = Router(data_from_config, sockets)
     print(router)
