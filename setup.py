@@ -20,13 +20,22 @@ def get_router_data(config_filename):
         with open(config_filename) as jsonFile:
             data = json.load(jsonFile)
             router_id = data['router-id']
-            input_ports = [port.strip() for port in data['input-ports'].split(",")]
+            if router_id >= 1024 and router_id <= 64000:
+                input_ports = [port.strip() for port in data['input-ports'].split(",")]
 
-            output_ports_string = [port.strip() for port in data['output-ports'].split(",")]
-            output_ports = []
-            for port in output_ports_string:
-                output_ports.append(port.split("-"))
+                output_ports_string = [port.strip() for port in data['output-ports'].split(",")]
+                output_ports = []
+                for port in output_ports_string:
+                    output_ports.append(port.split("-"))
 
-            return router_id, input_ports, output_ports
+                for data in output_ports:
+                    if data.length == 3 and (data[0] >= 1024 and data[0] <= 64000):
+                        return router_id, input_ports, output_ports
+                    elif data[0] < 1024 or data[0] > 64000:
+                        print('output port not in expected format')
+                    else:
+                        print('output port not in expected format')
+            else:
+                print('input port outside expected range')
     except:
         print('An error occurred with loading the config file')
