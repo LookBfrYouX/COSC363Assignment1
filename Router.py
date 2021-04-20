@@ -106,16 +106,18 @@ class Router:
                 return
 
             distance_to_next_hop = 0
+            found_neighbour = False
             for entry_next_hop, data_next_hop in self.routing_table.items():
                 if data_next_hop['destination_router_id'] == packet['router_id']:
                     distance_to_next_hop = data_next_hop['metric']
+                    found_neighbour = True
                     break
-                else:
-                    # Received a packet from a router that is a neighbour to this router,
-                    # which hasn't been added to the routing table of this router.
-                    # Add router to this routing table, and receive metric.
-                    distance_to_next_hop = self.add_neighbour(packet)
-                    break
+
+            # Received a packet from a router that is a neighbour to this router,
+            # which hasn't been added to the routing table of this router.
+            # Add router to this routing table, and receive metric.
+            if not found_neighbour:
+                distance_to_next_hop = self.add_neighbour(packet)
 
             entry_number = 1
             found = False
@@ -228,7 +230,6 @@ def main():
                 writeable_socket = writeable[0]  # doesn't matter what socket is used to send, so select first one.
                 response_packet = router.create_response_packet(destination_router_id)
                 response_packet_bytes = json.dumps(response_packet).encode('utf-8')
-                print(response_packet_bytes)
                 writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
 
 
