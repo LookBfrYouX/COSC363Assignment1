@@ -16,11 +16,11 @@ ENTRY_INDEX = 3  # "Initial" index of entries
 
 class Router:
     def __init__(self, data, sockets):
-        self.router_id = data[0]
+        self.router_id = data[0]  # Id of this router.
         self.input_ports = data[1]
         self.output_ports = data[2]
-        self.valid_packet = False
-        self.error_msg = ""
+        self.valid_packet = False  # Keeps track of whether a received response packet contains correct data.
+        self.error_msg = ""  # If a valid is not packet this message is displayed.
         self.routing_table = dict()
         self.response_packet = dict()
         self.sockets = sockets
@@ -107,6 +107,8 @@ class Router:
 
             distance_to_next_hop = 0
             found_neighbour = False
+            # Retrieves the metric for the distance between this router and the router which it received packet from.
+            # This metric will be added to further metric calculations.
             for entry_next_hop, data_next_hop in self.routing_table.items():
                 if data_next_hop['destination_router_id'] == packet['router_id']:
                     distance_to_next_hop = data_next_hop['metric']
@@ -216,13 +218,7 @@ def main():
 
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
 
-        for readable_socket in readable:
-            temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
-            response_packet = json.loads(temporary_storage.decode('utf-8'))
-            router.read_response_packet(response_packet)
-            # Print the routing table to command line to see the changes that occur when receiving a response packet.
-            print(router)
-
+        # Send
         for port in router.output_ports:
             port_number = port[0]
             destination_router_id = port[2]
@@ -231,6 +227,14 @@ def main():
                 response_packet = router.create_response_packet(destination_router_id)
                 response_packet_bytes = json.dumps(response_packet).encode('utf-8')
                 writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
+
+        # Receive
+        for readable_socket in readable:
+            temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
+            response_packet = json.loads(temporary_storage.decode('utf-8'))
+            router.read_response_packet(response_packet)
+            # Print the routing table to command line to see the changes that occur when receiving a response packet.
+            print(router)
 
 
 main()
