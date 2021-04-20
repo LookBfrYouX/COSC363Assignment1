@@ -218,6 +218,14 @@ def main():
 
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
 
+        # Receive
+        for readable_socket in readable:
+            temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
+            response_packet = json.loads(temporary_storage.decode('utf-8'))
+            router.read_response_packet(response_packet)
+            # Print the routing table to command line to see the changes that occur when receiving a response packet.
+            print(router)
+
         # Send
         for port in router.output_ports:
             port_number = port[0]
@@ -227,14 +235,6 @@ def main():
                 response_packet = router.create_response_packet(destination_router_id)
                 response_packet_bytes = json.dumps(response_packet).encode('utf-8')
                 writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
-
-        # Receive
-        for readable_socket in readable:
-            temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
-            response_packet = json.loads(temporary_storage.decode('utf-8'))
-            router.read_response_packet(response_packet)
-            # Print the routing table to command line to see the changes that occur when receiving a response packet.
-            print(router)
 
 
 main()
