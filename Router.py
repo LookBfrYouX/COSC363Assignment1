@@ -131,6 +131,7 @@ class Router:
 
             entry_number = 1
             trigger_update = False  # If a route becomes unreachable (metric = 16), an update needs to be triggered.
+            to_add = []  # new routes to add.
             for entry, data in self.routing_table.items():
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
@@ -156,10 +157,13 @@ class Router:
                 entry_number += 1
                 # If no entry for destination is found then a new one is created.
                 if not found:
-                    self.add_routing_table_entry(packet, entry_access, distance_to_next_hop)
+                    to_add.append((packet, entry_access, distance_to_next_hop))
             # If the metric of an entry has been set to 16 (unreachable) then this router needs to notify other routers.
             if trigger_update:
                 self.trigger_update()
+
+            for new_route in to_add:
+                self.add_routing_table_entry(new_route[0], new_route[1], new_route[2])
             return
         else:
             print(self.error_msg)
