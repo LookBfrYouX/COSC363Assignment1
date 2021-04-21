@@ -94,10 +94,11 @@ class Router:
             # "Split horizon with poisoned reverse" is used.
             if data['next_router_id'] == destination_router_id:
                 # Sets their metrics to "infinity"/unreachable as required by "Split horizon with poisoned reverse"
-                data['metric'] = 16
-            entry_access = "entry" + str(entry_number)
-            self.response_packet[entry_access] = data
-            entry_number += 1
+                data['metric'] = MAX_METRIC
+            if data['destination_router_id'] != destination_router_id:
+                entry_access = "entry" + str(entry_number)
+                self.response_packet[entry_access] = data
+                entry_number += 1
 
         return self.response_packet
 
@@ -122,7 +123,6 @@ class Router:
                     distance_to_next_hop = data_next_hop['metric']
                     found_neighbour = True
                     break
-
             # Received a packet from a router that is a neighbour to this router,
             # which hasn't been added to the routing table of this router.
             # Add router to this routing table, and receive metric.
@@ -134,7 +134,6 @@ class Router:
             for entry, data in self.routing_table.items():
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
-                print(packet[entry_access])
                 if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                     # If the new distance is smaller than the existing value, adopt the new route.
                     if (packet[entry_access]['metric'] + distance_to_next_hop) < data['metric']:
@@ -181,7 +180,7 @@ class Router:
         """
         destination_router = packet[entry_access]['destination_router_id']
         next_router = packet['router_id']
-        distance = packet[entry_access]['metric'] + distance_to_next_hop
+        distance = int(packet[entry_access]['metric']) + int(distance_to_next_hop)
 
         entry = len(self.routing_table)
         self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': int(distance),
@@ -197,9 +196,16 @@ class Router:
 
             entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
-                self.routing_table[entry_number] = {'destination_router_id': destination, 'metric': int(metric),
-                                                    'next_router_id': "", 'flag': True}
-                return metric
+                insert_entry = True
+                new_entry = {'destination_router_id': destination, 'metric': int(metric),
+                             'next_router_id': "", 'flag': True}
+                for entry, data in self.routing_table.items():
+                    if data == new_entry:
+                        insert_entry = False
+                        break
+                if insert_entry:
+                    self.routing_table[entry_number] = new_entry
+                    return metric
         return 0
 
     def trigger_update(self):
