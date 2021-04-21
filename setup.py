@@ -6,11 +6,12 @@ def get_config_file():
     config_filename = ''
     try:
         # gets the second argument from the command line which is the config file
-        print(sys.argv[1])
         config_filename = sys.argv[1]
         return config_filename
     except:
-        print('An error occurred with the input')
+        print('An error occurred with the input.')
+        print('Terminating...')
+        sys.exit()
 
 
 def get_router_data(config_filename):
@@ -20,8 +21,13 @@ def get_router_data(config_filename):
         with open(config_filename) as jsonFile:
             data = json.load(jsonFile)
             router_id = data['router-id']
-            if router_id >= 1024 and router_id <= 64000:
+            if 1 <= int(router_id) <= 64000:
                 input_ports = [port.strip() for port in data['input-ports'].split(",")]
+
+                for input_port in input_ports:
+                    if 1024 >= int(input_port) >= 64000:
+                        print('Input port outside expected range.')
+                        sys.exit()
 
                 output_ports_string = [port.strip() for port in data['output-ports'].split(",")]
                 output_ports = []
@@ -29,13 +35,18 @@ def get_router_data(config_filename):
                     output_ports.append(port.split("-"))
 
                 for data in output_ports:
-                    if data.length == 3 and (data[0] >= 1024 and data[0] <= 64000):
+                    if len(data) == 3 and (1024 <= int(data[0]) <= 64000):
                         return router_id, input_ports, output_ports
-                    elif data[0] < 1024 or data[0] > 64000:
-                        print('output port not in expected format')
+                    elif int(data[0]) < 1024 or int(data[0]) > 64000:
+                        print('Output port not in expected format.')
+                        sys.exit()
                     else:
-                        print('output port not in expected format')
+                        print('Output port not in expected format.')
+                        sys.exit()
             else:
-                print('input port outside expected range')
+                print('Router id outside expected range.')
+                sys.exit()
     except:
-        print('An error occurred with loading the config file')
+        print('An error occurred with loading the config file.')
+        print('Terminating...')
+        sys.exit()
