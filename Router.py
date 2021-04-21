@@ -3,6 +3,7 @@ import json
 import socket
 import select
 import sys
+import time
 
 BUFFER_SIZE = 1024
 HOST = "127.0.0.1"
@@ -12,6 +13,11 @@ MIN_LENGTH_PACKET = 4  # Require Command, Version, and Router-Id fields with at 
 MAX_LENGTH_PACKET = 28  # Require Command, Version, and Router-Id fields with up to 25 RIP entries.
 
 ENTRY_INDEX = 3  # "Initial" index of entries
+
+#Times in seconds keeps rip ratios but divde by 6
+GARBAGE_COLLECTION_AFTER_TIMEOUT = 20
+PACKET_TIMEOUT = 30
+PERIODIC_UPDATE = 5
 
 
 class Router:
@@ -176,7 +182,7 @@ class Router:
             entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
                 self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': int(metric),
-                                                    'next_router_id': "", 'flag': True}
+                                                    'next_router_id': "", 'flag' : True}
                 return metric
         return 0
 
@@ -189,6 +195,8 @@ class Router:
             string += "{0} {1} {2} \n"
             string.format(data['destination_router_id'], data['metric'], data['next_router_id'])
         return string
+
+    
 
 
 def main():
