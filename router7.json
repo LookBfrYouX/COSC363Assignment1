@@ -1,5 +1,5 @@
 {
   "router-id": "7",
-  "input-ports": "4014, 4015",
-  "output-ports": "4001-8-1, 4009-6-4"
+  "input-ports": "5014, 5015",
+  "output-ports": "5001-8-1, 5009-6-4"
 }
