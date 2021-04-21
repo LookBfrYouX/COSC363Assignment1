@@ -223,7 +223,7 @@ class Router:
         string += "===========================================================\n"
         return string
 
-    
+
 
 
 def main():
@@ -249,26 +249,6 @@ def main():
     while True:
 
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
-
-<<<<<<< HEAD
-        for readable_socket in readable:
-            temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
-            response_packet = json.loads(temporary_storage.decode('utf-8'))
-            router.read_response_packet(response_packet)
-            # Print the routing table to command line to see the changes that occur when receiving a response packet.
-            print(router)
-
-        for port in router.output_ports:
-            port_number = port[0]
-            destination_router_id = port[2]
-            if len(writeable) > 0:  # At least one socket is free to send a response packet
-                writeable_socket = writeable[0]  # doesn't matter what socket is used to send, so select first one.
-                response_packet = router.create_response_packet(destination_router_id)
-                response_packet_bytes = json.dumps(response_packet).encode('utf-8')
-                print(response_packet_bytes)
-                writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
-=======
-        # Receive
         if len(readable) > 0:
             for readable_socket in readable:
                 temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
@@ -288,7 +268,7 @@ def main():
         #         response_packet = router.create_response_packet(destination_router_id)
         #         response_packet_bytes = json.dumps(response_packet).encode('utf-8')
         #         writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
->>>>>>> 04221c488d9b65f5503db2770340bfb4ee9d9634
+
 
 
 main()
