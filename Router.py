@@ -138,7 +138,7 @@ class Router:
                 entry_access = "entry" + str(entry_number)
                 if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                     # If the new distance is smaller than the existing value, adopt the new route.
-                    if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) < int(data['metric']):
+                    if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) <= int(data['metric']):
                         # Update routing table
                         self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
                                                               int(distance_to_next_hop)
@@ -148,7 +148,7 @@ class Router:
                     # even if it is larger than the old one.
                     elif data['next_router_id'] == packet['router_id']:
                         self.routing_table[entry]['flag'] = True
-                        if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) >= 16:
+                        if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) > 16:
                             self.routing_table[entry]['metric'] = MAX_METRIC
                             trigger_update = True
                         else:
