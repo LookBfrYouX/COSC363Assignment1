@@ -3,6 +3,7 @@ import json
 import socket
 import select
 import sys
+import time
 
 BUFFER_SIZE = 1024
 HOST = "127.0.0.1"
@@ -13,6 +14,7 @@ MAX_LENGTH_PACKET = 28  # Require Command, Version, and Router-Id fields with up
 
 ENTRY_INDEX = 3  # "Initial" index of entries
 MAX_METRIC = 16
+PERIODIC_UPDATE = 5
 
 
 class Router:
@@ -60,13 +62,18 @@ class Router:
             for i in range(ENTRY_INDEX, len(packet)):
                 # TODO add additional checks for content of RIP entry (optional)
                 entry = "entry" + str(i - 2)
-                if packet[entry]['metric'] < 1 or packet[entry]['metric'] > 16:
-                    self.valid_packet = False
-                    self.error_msg = "The metric for a RIP entry is invalid"
-                    break
+                if len(packet[entry]) > 0:
+                    if packet[entry]['metric'] < 1 or packet[entry]['metric'] > 16:
+                        self.valid_packet = False
+                        self.error_msg = "The metric for a RIP entry is invalid"
+                        break
+                    else:
+                        self.valid_packet = True
+                        self.error_msg = ""
                 else:
                     self.valid_packet = True
                     self.error_msg = ""
+                    break
 
     def create_response_packet(self, destination_router_id):
         """Creates a RIP response packet based on the specifications."""
@@ -127,7 +134,8 @@ class Router:
             for entry, data in self.routing_table.items():
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
-                if data['destination_router_id'] == packet[entry_access]['router_id']:
+                print(packet[entry_access])
+                if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                     # If the new distance is smaller than the existing value, adopt the new route.
                     if (packet[entry_access]['metric'] + distance_to_next_hop) < data['metric']:
                         # Update routing table
@@ -171,12 +179,12 @@ class Router:
         empty string if directly connected (in our setup).
         - flag, indicates whether the route has changed recently. (True or False)
         """
-        destination_router = packet[entry_access]['router_id']
+        destination_router = packet[entry_access]['destination_router_id']
         next_router = packet['router_id']
         distance = packet[entry_access]['metric'] + distance_to_next_hop
 
         entry = len(self.routing_table)
-        self.routing_table[entry] = {'destination_router-id': destination_router, 'metric': int(distance),
+        self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': int(distance),
                                      'next_router_id': next_router, 'flag': True}
 
     def add_neighbour(self, packet):
@@ -189,7 +197,7 @@ class Router:
 
             entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
-                self.routing_table[entry_number] = {'destination_router-id': destination, 'metric': int(metric),
+                self.routing_table[entry_number] = {'destination_router_id': destination, 'metric': int(metric),
                                                     'next_router_id': "", 'flag': True}
                 return metric
         return 0
@@ -212,8 +220,9 @@ class Router:
                  " \n" \
                  "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
         for entry, data in self.routing_table.items():
-            string += "{0} {1} {2} {3} {4}\n"
-            string.format(data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], "To Add")
+            string += "    {0}            {1}           {2}           {3}      {4}".format(
+                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], "To Add")
+            string += "\n"
         string += "===========================================================\n"
         return string
 
@@ -236,32 +245,36 @@ def main():
             sys.exit()
 
     router = Router(data_from_config, sockets)
-    print(router)   # Print initial routing table of router (empty).
+    print(router)  # Print initial routing table of router (empty).
 
     while True:
 
+        time.sleep(PERIODIC_UPDATE)
+
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
+
+        # Send
+        for port in router.output_ports:
+            port_number = port[0]
+            destination_router_id = port[2]
+            if len(writeable) > 0:  # At least one socket is free to send a response packet
+                writeable_socket = writeable[0]  # doesn't matter what socket is used to send, so select first one.
+                response_packet = router.create_response_packet(destination_router_id)
+                response_packet_bytes = json.dumps(response_packet).encode('utf-8')
+                writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
 
         # Receive
         if len(readable) > 0:
             for readable_socket in readable:
-                temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)
-                response_packet = json.loads(temporary_storage.decode('utf-8'))
-                router.read_response_packet(response_packet)
-                # Print the routing table to command line to see the changes that occur when
-                # receiving a response packet.
-                print(router)
-
-        # # Send
-        # for port in router.output_ports:
-        #     port_number = port[0]
-        #     destination_router_id = port[2]
-        #     readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
-        #     if len(writeable) > 0:  # At least one socket is free to send a response packet
-        #         writeable_socket = writeable[0]  # doesn't matter what socket is used to send, so select first one.
-        #         response_packet = router.create_response_packet(destination_router_id)
-        #         response_packet_bytes = json.dumps(response_packet).encode('utf-8')
-        #         writeable_socket.sendto(response_packet_bytes, (HOST, int(port_number)))
+                try:
+                    temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)[0]
+                    response_packet = json.loads(temporary_storage.decode('utf-8'))
+                    router.read_response_packet(response_packet)
+                    # Print the routing table to command line to see the changes that occur when
+                    # receiving a response packet.
+                    print(router)
+                except ConnectionResetError:
+                    print("")
 
 
 main()
