@@ -1,3 +1,4 @@
+from random import randrange
 import setup
 import json
 import socket
@@ -137,20 +138,22 @@ class Router:
                 entry_access = "entry" + str(entry_number)
                 if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                     # If the new distance is smaller than the existing value, adopt the new route.
-                    if (packet[entry_access]['metric'] + distance_to_next_hop) < data['metric']:
+                    if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) < int(data['metric']):
                         # Update routing table
-                        self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + distance_to_next_hop
+                        self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
+                                                              int(distance_to_next_hop)
                         self.routing_table[entry]['next_router_id'] = packet['router_id']
                         self.routing_table[entry]['flag'] = True
                     # If the router from which the existing route came, then use the new metric
                     # even if it is larger than the old one.
                     elif data['next_router_id'] == packet['router_id']:
                         self.routing_table[entry]['flag'] = True
-                        if (packet[entry_access]['metric'] + distance_to_next_hop) >= 16:
+                        if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) >= 16:
                             self.routing_table[entry]['metric'] = MAX_METRIC
                             trigger_update = True
                         else:
-                            self.routing_table[entry]['metric'] = packet[entry_access]['metric'] + distance_to_next_hop
+                            self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
+                                                                  int(distance_to_next_hop)
                     # Entry found for destination router so set to true
                     # (data['destination_router_id'] == packet[entry_access]['router_id'])
                     found = True
@@ -259,7 +262,7 @@ def main():
 
     while True:
 
-        time.sleep(PERIODIC_UPDATE)
+        time.sleep(PERIODIC_UPDATE * randrange(8, 12, 1) / 10)
 
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
 
