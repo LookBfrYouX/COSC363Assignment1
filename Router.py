@@ -111,8 +111,6 @@ class Router:
         a function is called to add that RIP entry to the routing table.
         """
         self.validate_response_packet(packet)
-        print("Incoming:", packet)
-        print("Table:", self.routing_table)
 
         if self.valid_packet:
             # Consider setup when initial routing table is empty.
@@ -143,11 +141,11 @@ class Router:
                 for entry, data in self.routing_table.items():
                     if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                         # If the new distance is smaller than the existing value, adopt the new route.
-                        print("Distance:", distance_to_next_hop)
                         if (int(packet[entry_access]['metric']) + distance_to_next_hop) < int(data['metric']):
                             # Update routing table
                             if (int(packet[entry_access]['metric']) + distance_to_next_hop) > 16:
                                 self.routing_table[entry]['metric'] = MAX_METRIC
+                                trigger_update = True
                             else:
                                 self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
                                                                       distance_to_next_hop
