@@ -5,6 +5,7 @@ import socket
 import select
 import sys
 import time
+import copy
 
 BUFFER_SIZE = 1024
 HOST = "127.0.0.1"
@@ -91,18 +92,17 @@ class Router:
 
         entry_number = 1
         for entry, data in self.routing_table.items():
+            # Need to make a new copy of data, otherwise following operations overwrite routing table.
+            data_to_send = copy.deepcopy(data)
             # Routes learnt from neighbor included in updates sent to that neighbor.
             # "Split horizon with poisoned reverse" is used.
             if data['next_router_id'] == destination_router_id:
                 # Sets their metrics to "infinity"/unreachable as required by "Split horizon with poisoned reverse"
-                data['metric'] = MAX_METRIC
+                data_to_send['metric'] = MAX_METRIC
             if data['destination_router_id'] != destination_router_id:
                 entry_access = "entry" + str(entry_number)
-                self.response_packet[entry_access] = data
+                self.response_packet[entry_access] = data_to_send
                 entry_number += 1
-
-        print("Table:", self.routing_table)
-        print("Response:", self.response_packet)
 
         return self.response_packet
 
@@ -112,6 +112,7 @@ class Router:
         """
         self.validate_response_packet(packet)
         print("Incoming:", packet)
+        print("Table:", self.routing_table)
 
         if self.valid_packet:
             # Consider setup when initial routing table is empty.
@@ -125,14 +126,14 @@ class Router:
             # This metric will be added to further metric calculations.
             for entry_next_hop, data_next_hop in self.routing_table.items():
                 if data_next_hop['destination_router_id'] == packet['router_id']:
-                    distance_to_next_hop = data_next_hop['metric']
+                    distance_to_next_hop = int(data_next_hop['metric'])
                     found_neighbour = True
                     break
             # Received a packet from a router that is a neighbour to this router,
             # which hasn't been added to the routing table of this router.
             # Add router to this routing table, and receive metric.
             if not found_neighbour:
-                distance_to_next_hop = self.add_neighbour(packet)
+                distance_to_next_hop = int(self.add_neighbour(packet))
 
             trigger_update = False  # If a route becomes unreachable (metric = 16), an update needs to be triggered.
             to_add = []  # new routes to add.
@@ -142,22 +143,26 @@ class Router:
                 for entry, data in self.routing_table.items():
                     if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                         # If the new distance is smaller than the existing value, adopt the new route.
-                        if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) <= int(data['metric']):
+                        print("Distance:", distance_to_next_hop)
+                        if (int(packet[entry_access]['metric']) + distance_to_next_hop) < int(data['metric']):
                             # Update routing table
-                            self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
-                                                                  int(distance_to_next_hop)
+                            if (int(packet[entry_access]['metric']) + distance_to_next_hop) > 16:
+                                self.routing_table[entry]['metric'] = MAX_METRIC
+                            else:
+                                self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
+                                                                      distance_to_next_hop
                             self.routing_table[entry]['next_router_id'] = packet['router_id']
                             self.routing_table[entry]['flag'] = True
                             # If the router from which the existing route came, then use the new metric
                             # even if it is larger than the old one.
                         elif data['next_router_id'] == packet['router_id']:
                             self.routing_table[entry]['flag'] = True
-                            if (int(packet[entry_access]['metric']) + int(distance_to_next_hop)) > 16:
+                            if (int(packet[entry_access]['metric']) + distance_to_next_hop) > 16:
                                 self.routing_table[entry]['metric'] = MAX_METRIC
                                 trigger_update = True
                             else:
                                 self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
-                                                                      int(distance_to_next_hop)
+                                                                      distance_to_next_hop
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
@@ -190,10 +195,10 @@ class Router:
         """
         destination_router = packet[entry_access]['destination_router_id']
         next_router = packet['router_id']
-        distance = int(packet[entry_access]['metric']) + int(distance_to_next_hop)
+        distance = int(packet[entry_access]['metric']) + distance_to_next_hop
 
         entry = len(self.routing_table)
-        self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': int(distance),
+        self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
                                      'next_router_id': next_router, 'flag': True}
 
     def add_neighbour(self, packet):
@@ -290,6 +295,7 @@ def main():
                     # receiving a response packet.
                     print(router)
                 except ConnectionResetError:
+                    # Prevents the router from crashing when neighbour is not yet online.
                     print("")
 
 
