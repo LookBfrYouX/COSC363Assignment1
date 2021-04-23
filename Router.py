@@ -165,8 +165,6 @@ class Router:
                             else:
                                 self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
                                                                       distance_to_next_hop
-                        # update timer as received packet from router
-                        self.routing_table[entry]['time']
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
@@ -179,18 +177,20 @@ class Router:
 
             current_time = time.time()
             for new_route in to_add:
-                self.add_routing_table_entry(new_route[0], new_route[1], new_route[2])
-            # checking whether packet has expired if it has set time to null then if time = null when reciving packet
+                self.add_routing_table_entry(new_route[0], new_route[1], new_route[2], new_route[3])
+            # checking whether packet has expired if it has set time to null then if time = null when receiving packet
             # destroy entry
             for entry, data in self.routing_table.items():
-                if entry["time"][0] >= (time + PACKET_TIMEOUT):
+                if data["time"][0] >= (time + PACKET_TIMEOUT):
                     self.routing_table[entry]["time"] = (None, current_time)
                     self.routing_table[entry]['metric'] = MAX_METRIC
-                elif entry["time"][1] >= (time + GARBAGE_COLLECTION):
+                elif data["time"][1] >= (time + GARBAGE_COLLECTION):
                     del self.routing_table[entry]
-                else:
-                    self.routing_table[entry]["time"] = (current_time, None)
 
+                # Updating timers from received neighbour.
+                if (packet['router_id'] == data['next_router_id']) or \
+                        (packet['router_id'] == data['destination_router_id']):
+                    self.routing_table[entry]["time"] = (current_time, None)
             return
         else:
             print(self.error_msg)
