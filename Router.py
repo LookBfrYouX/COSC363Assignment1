@@ -167,7 +167,8 @@ class Router:
                         current_time = time.time()
                         # If the timeout timer exceeds the max time, garbage timer is begun.
                         # The metric for the route is updated to 16 (unreachable)
-                        if (current_time >= (data['timeout'] + PACKET_TIMEOUT)) and (data["timeout"] > 0):
+                        if ((current_time >= (data['timeout'] + PACKET_TIMEOUT)) and (data['timeout'] > 0)) \
+                                or data['metric'] == MAX_METRIC:
                             self.routing_table[entry]["timeout"] = 0.00
                             self.routing_table[entry]["garbage"] = current_time
                             self.routing_table[entry]["metric"] = MAX_METRIC
