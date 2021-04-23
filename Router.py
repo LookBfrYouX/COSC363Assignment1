@@ -204,16 +204,16 @@ class Router:
         router this means that it is a neighbour (i.e. directly connect). The directly connect neighbour is then
         added to the routing table of this router."""
         for port in self.output_ports:
-            metric = port[1]
+            metric = int(port[1])
             destination = port[2]
 
             entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
                 insert_entry = True
-                new_entry = {'destination_router_id': destination, 'metric': int(metric),
-                             'next_router_id': "", 'flag': True}
+                new_entry = {'destination_router_id': destination, 'metric': metric,
+                             'next_router_id': "", 'flag': True, 'timeout': 0.00, 'garbage': 0.00}
                 for entry, data in self.routing_table.items():
-                    if data == new_entry:
+                    if data['destination_router_id'] == new_entry['destination_router_id']:
                         insert_entry = False
                         break
                 if insert_entry:
@@ -222,6 +222,7 @@ class Router:
         return 0
 
     def trigger_update(self):
+        """If the metric of a route is set to 16 (unreachable) then the router needs to notify its neighbours."""
         for port in self.output_ports:
             port_number = port[0]
             destination_router_id = port[2]
@@ -234,19 +235,29 @@ class Router:
 
     def __str__(self):
         """Returns the formatted string represent of the Router's routing table"""
-        string = "===========================================================\n" \
+        string = "=====================================================================================\n" \
                  "Routing Table: \n" \
                  " \n" \
-                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
+                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)\n"
         for entry, data in self.routing_table.items():
-            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:<6}".format(
-                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], "To Add")
+            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:10.2f} {5:16.2f}".format(
+                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['timeout'],
+                data['garbage'])
             string += "\n"
-        string += "===========================================================\n"
+        string += "=====================================================================================\n"
         return string
 
 
 def main():
+    """
+    The main process of the router.
+
+    1. Router data is read from the configuration data.
+    2. Each input port is bound to socket.
+    3. Router is created with information from config files and the corresponding sockets.
+    4. Approximately every 5 seconds (+/- 1 second) the router notifies its neighbours of changes to its routing table,
+    and then checks to see if it has received any response packets from its neighbours.
+    """
     config = setup.get_config_file()
     data_from_config = setup.get_router_data(config)
     input_ports = data_from_config[1]
