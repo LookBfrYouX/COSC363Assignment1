@@ -129,7 +129,7 @@ class Router:
 
             trigger_update = False  # If a route becomes unreachable (metric = 16), an update needs to be triggered.
             to_add = []  # new routes to add.
-            to_delete = []  # routes to delete if inactive
+            to_delete = set()  # routes to delete if inactive
             for entry_number in range(1, len(packet) - ENTRY_INDEX):
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
@@ -175,7 +175,7 @@ class Router:
                     # If the garbage collection timer exceeds the max time, the route is marked for deletion from
                     # routing table.
                     if (current_time > (data["garbage"] + GARBAGE_COLLECTION)) and (data["garbage"] > 0):
-                        to_delete.append(entry)
+                        to_delete.add(entry)
 
                 # If no entry for destination is found then a new one is created.
                 if not found:
@@ -283,12 +283,14 @@ class Router:
         for entry, data in self.routing_table.items():
             if data['garbage'] > 0:
                 garbage = current_time - data['garbage']
+                timeout = 0.00
             else:
+                timeout = current_time - data['timeout']
                 garbage = 0.00
 
             string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:10.2f} {5:16.2f}".format(
                 data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'],
-                current_time - data['timeout'], garbage)
+                timeout, garbage)
             string += "\n"
 
         string += "=====================================================================================\n"
