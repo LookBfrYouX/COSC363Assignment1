@@ -114,6 +114,9 @@ class Router:
         """
         self.validate_response_packet(packet)
 
+        print(self.valid_packet)
+        print(packet)
+
         if self.valid_packet:
             time_read = time.time()
             # Consider setup when initial routing table is empty.
@@ -178,6 +181,8 @@ class Router:
             current_time = time.time()
             for new_route in to_add:
                 self.add_routing_table_entry(new_route[0], new_route[1], new_route[2], new_route[3])
+
+            to_delete = []  # A list of routes to be deleted.
             # checking whether packet has expired if it has set time to null then if time = null when receiving packet
             # destroy entry
             for entry, data in self.routing_table.items():
@@ -185,12 +190,15 @@ class Router:
                     self.routing_table[entry]["time"] = (0, current_time)
                     self.routing_table[entry]['metric'] = MAX_METRIC
                 elif data["time"][1] >= (current_time + GARBAGE_COLLECTION):
-                    del self.routing_table[entry]
-
+                    to_delete.append(entry)
                 # Updating timers from received neighbour.
                 if (packet['router_id'] == data['next_router_id']) or \
                         (packet['router_id'] == data['destination_router_id']):
                     self.routing_table[entry]["time"] = (current_time, 0)
+
+            for entry in to_delete:
+                del self.routing_table[entry]
+
             return
         else:
             print(self.error_msg)
