@@ -186,12 +186,14 @@ class Router:
             # checking whether packet has expired if it has set time to null then if time = null when receiving packet
             # destroy entry
             for entry, data in self.routing_table.items():
-                if data["time"][0] >= (current_time + PACKET_TIMEOUT):
+                if current_time >= (data["time"][0] + PACKET_TIMEOUT):
                     self.routing_table[entry]["time"] = (0, current_time)
                     self.routing_table[entry]['metric'] = MAX_METRIC
-                elif data["time"][1] >= (current_time + GARBAGE_COLLECTION):
+
+                if current_time >= (data["time"][1]  + GARBAGE_COLLECTION):
                     to_delete.append(entry)
                 # Updating timers from received neighbour.
+
                 if (packet['router_id'] == data['next_router_id']) or \
                         (packet['router_id'] == data['destination_router_id']):
                     self.routing_table[entry]["time"] = (current_time, 0)
