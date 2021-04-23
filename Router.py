@@ -157,32 +157,30 @@ class Router:
                             else:
                                 self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
                                                                       distance_to_next_hop
+
+                        self.routing_table[entry]['timeout'] = current_time
+                        self.routing_table[entry]['garbage'] = 0.00
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
-                        self.routing_table[entry]['timeout'] = current_time
-                        self.routing_table[entry]['garbage'] = 0.00
 
-                    current_time = time.time()
-                    # If the timeout timer exceeds the max time, garbage timer is begun.
-                    # The metric for the route is updated to 16 (unreachable)
-                    if current_time > (data['timeout'] + PACKET_TIMEOUT):
-                        self.routing_table[entry]["timeout"] = current_time
-                        self.routing_table[entry]["garbage"] = current_time
-                        self.routing_table[entry]['metric'] = MAX_METRIC
-                        trigger_update = True
+                        current_time = time.time()
+                        # If the timeout timer exceeds the max time, garbage timer is begun.
+                        # The metric for the route is updated to 16 (unreachable)
+                        if (current_time >= (data['timeout'] + PACKET_TIMEOUT)) and (data["timeout"] > 0):
+                            self.routing_table[entry]["timeout"] = 0.00
+                            self.routing_table[entry]["garbage"] = current_time
+                            self.routing_table[entry]["metric"] = MAX_METRIC
+                            trigger_update = True
 
-                    # If the garbage collection timer exceeds the max time, the route is marked for deletion from
-                    # routing table.
-                    if (current_time > (data["garbage"] + GARBAGE_COLLECTION)) and (data["garbage"] > 0):
-                        to_delete.add(entry)
+                        # If the garbage collection timer exceeds the max time, the route is marked for deletion from
+                        # routing table.
+                        if (current_time >= (data["garbage"] + GARBAGE_COLLECTION)) and (data["garbage"] > 0):
+                            to_delete.add(entry)
 
                 # If no entry for destination is found then a new one is created.
                 if not found:
                     to_add.append((packet, entry_access, distance_to_next_hop))
-            # If the metric of an entry has been set to 16 (unreachable) then this router needs to notify other routers.
-            if trigger_update:
-                self.trigger_update()
 
             # If a route does not already exist it is added to the routing table.
             # This is done here because otherwise the size of the routing table would change
@@ -192,6 +190,11 @@ class Router:
 
             for entry in to_delete:
                 del self.routing_table[entry]
+
+            # If the metric of an entry has been set to 16 (unreachable) then this router needs to notify other routers.
+            if trigger_update:
+                self.trigger_update()
+
             return
         else:
             print(self.error_msg)
