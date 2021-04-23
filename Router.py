@@ -17,6 +17,8 @@ MAX_LENGTH_PACKET = 28  # Require Command, Version, and Router-Id fields with up
 ENTRY_INDEX = 3  # "Initial" index of entries
 MAX_METRIC = 16
 PERIODIC_UPDATE = 5
+PACKET_TIMEOUT = 30
+GARBAGE_COLLECTION = 20
 
 
 class Router:
@@ -62,7 +64,6 @@ class Router:
             self.error_msg = "The version field of the packet is incorrect."
         else:
             for i in range(ENTRY_INDEX, len(packet)):
-                # TODO add additional checks for content of RIP entry (optional)
                 entry = "entry" + str(i - 2)
                 if len(packet[entry]) > 0:
                     if packet[entry]['metric'] < 1 or packet[entry]['metric'] > 16:
@@ -118,15 +119,8 @@ class Router:
                 self.add_neighbour(packet)  # empty
                 return
 
-            distance_to_next_hop = 0
-            found_neighbour = False
-            # Retrieves the metric for the distance between this router and the router which it received packet from.
-            # This metric will be added to further metric calculations.
-            for entry_next_hop, data_next_hop in self.routing_table.items():
-                if data_next_hop['destination_router_id'] == packet['router_id']:
-                    distance_to_next_hop = int(data_next_hop['metric'])
-                    found_neighbour = True
-                    break
+            distance_to_next_hop, found_neighbour = self.get_distance_to_next_hop(packet)
+
             # Received a packet from a router that is a neighbour to this router,
             # which hasn't been added to the routing table of this router.
             # Add router to this routing table, and receive metric.
@@ -179,6 +173,20 @@ class Router:
             print("Discarding packet...")
             return
 
+    def get_distance_to_next_hop(self, packet):
+        """Returns the distance to next hop. This distance is used in metric calculation for routes.
+        A boolean representing whether a next hop exists is also returned."""
+        distance_to_next_hop = 0
+        found_neighbour = False
+        # Retrieves the metric for the distance between this router and the router which it received packet from.
+        # This metric will be added to further metric calculations.
+        for entry_next_hop, data_next_hop in self.routing_table.items():
+            if data_next_hop['destination_router_id'] == packet['router_id']:
+                distance_to_next_hop = int(data_next_hop['metric'])
+                found_neighbour = True
+                break
+        return distance_to_next_hop, found_neighbour
+
     def add_routing_table_entry(self, packet, entry_access, distance_to_next_hop):
         """
         Adds an entry to routing table for the router.
@@ -190,6 +198,9 @@ class Router:
         - next_router_id, the router id of the next router along the path to the destination,
         empty string if directly connected (in our setup).
         - flag, indicates whether the route has changed recently. (True or False)
+        - timeout, keeps track of time since the route was active.
+        - garbage, keeps track of time after a route timeout. Once this value exceeds GARBAGE_COLLECTION,
+        the route is deleted from the routing table.
         """
         destination_router = packet[entry_access]['destination_router_id']
         next_router = packet['router_id']
@@ -197,7 +208,7 @@ class Router:
 
         entry = len(self.routing_table)
         self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
-                                     'next_router_id': next_router, 'flag': True}
+                                     'next_router_id': next_router, 'flag': True, 'timeout': 0.00, 'garbage': 0.00}
 
     def add_neighbour(self, packet):
         """During initial setup if this router receives an empty entry from another,
