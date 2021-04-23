@@ -183,10 +183,10 @@ class Router:
             # checking whether packet has expired if it has set time to null then if time = null when reciving packet
             # destroy entry
             for entry, data in self.routing_table.items():
-                if (entry["time"][0] >= (time + PACKET_TIMEOUT)):
+                if entry["time"][0] >= (time + PACKET_TIMEOUT):
                     self.routing_table[entry]["time"] = (None, current_time)
                     self.routing_table[entry]['metric'] = MAX_METRIC
-                elif (entry["time"][1] >= (time + GARBAGE_COLLECTION)):
+                elif entry["time"][1] >= (time + GARBAGE_COLLECTION):
                     del self.routing_table[entry]
                 else:
                     self.routing_table[entry]["time"] = (current_time, None)
@@ -266,6 +266,9 @@ class Router:
 
 
 def main():
+    """
+    The main process of the router.
+    """
     config = setup.get_config_file()
     data_from_config = setup.get_router_data(config)
     input_ports = data_from_config[1]
