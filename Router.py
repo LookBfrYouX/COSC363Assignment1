@@ -239,7 +239,7 @@ class Router:
                  " \n" \
                  "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
         for entry, data in self.routing_table.items():
-            string += "    {0}            {1}           {2}           {3}      {4}".format(
+            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:<6}".format(
                 data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], "To Add")
             string += "\n"
         string += "===========================================================\n"
