@@ -165,8 +165,7 @@ class Router:
                             else:
                                 self.routing_table[entry]['metric'] = int(packet[entry_access]['metric']) + \
                                                                       distance_to_next_hop
-                                                                      int(distance_to_next_hop)
-                        #update timer as recieved packet from router
+                        # update timer as received packet from router
                         self.routing_table[entry]['time']
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
@@ -181,7 +180,8 @@ class Router:
             current_time = time.time()
             for new_route in to_add:
                 self.add_routing_table_entry(new_route[0], new_route[1], new_route[2])
-            #checking whether packet has expired if it has set time to null then if time = null when reciving packet destroy entry
+            # checking whether packet has expired if it has set time to null then if time = null when reciving packet
+            # destroy entry
             for entry, data in self.routing_table.items():
                 if (entry["time"][0] >= (time + PACKET_TIMEOUT)):
                     self.routing_table[entry]["time"] = (None, current_time)
@@ -214,10 +214,8 @@ class Router:
         distance = int(packet[entry_access]['metric']) + distance_to_next_hop
 
         entry = len(self.routing_table)
-        self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': int(distance),
-                                     'next_router_id': next_router, 'flag': True, 'time': time}
         self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
-                                     'next_router_id': next_router, 'flag': True}
+                                     'next_router_id': next_router, 'flag': True, 'time': time}
 
     def add_neighbour(self, packet):
         """During initial setup if this router receives an empty entry from another,
@@ -242,6 +240,7 @@ class Router:
         return 0
 
     def trigger_update(self):
+        """If the metric of a route is set to 16 (unreachable) then this router needs to notify its neighbours."""
         for port in self.output_ports:
             port_number = port[0]
             destination_router_id = port[2]
@@ -260,8 +259,6 @@ class Router:
                  "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
         for entry, data in self.routing_table.items():
             string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:<6}".format(
-                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], "To Add")
-            string += "    {0}            {1}           {2}           {3}      {4}".format(
                 data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['time'])
             string += "\n"
         string += "===========================================================\n"
