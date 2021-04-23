@@ -135,7 +135,8 @@ class Router:
 
         if self.valid_packet:
             # Consider setup when initial routing table is empty.
-            if len(packet["entry1"]) == 0:
+            if len(self.routing_table) == 0:
+                print(packet['entry1'])
                 self.add_neighbour(packet)  # empty
                 return
 
@@ -144,7 +145,7 @@ class Router:
             # Retrieves the metric for the distance between this router and the router which it received packet from.
             # This metric will be added to further metric calculations.
             for entry_next_hop, data_next_hop in self.routing_table.items():
-                if data_next_hop['destination_router_id'] == packet['router_id'] and len(self.routing_table) == 0:
+                if data_next_hop['destination_router_id'] == packet['router_id']:
                     distance_to_next_hop = int(data_next_hop['metric'])
                     found_neighbour = True
                     break
@@ -152,7 +153,9 @@ class Router:
             # which hasn't been added to the routing table of this router.
             # Add router to this routing table, and receive metric.
             if not found_neighbour:
+                print('adding neighbour')
                 distance_to_next_hop = int(self.add_neighbour(packet))
+
 
             to_add = []  # new routes to add.
             for entry_number in range(1, len(packet) - ENTRY_INDEX):
@@ -185,15 +188,15 @@ class Router:
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
                 # If no entry for destination is found then a new one is created.
-                current_time = time.time()
                 if not found:
                     to_add.append((packet, entry_access, distance_to_next_hop, current_time))
-                for entry, data in self.routing_table.items():
-                    print('in update time loop')
-                    if (packet['router_id'] == data['next_router_id']) or \
-                       (packet['router_id'] == data['destination_router_id']):
-                       self.routing_table[data]['time'][0] = (current_time, infinity)
-                       print('updated time')
+            current_time = time.time()
+            for entry, data in self.routing_table.items():
+                print('in update time loop')
+                if (packet['router_id'] == data['next_router_id']) or \
+                   (packet['router_id'] == data['destination_router_id']):
+                   self.routing_table[entry]['time'] = (current_time, None)
+                   print('updated time')
             # If the metric of an entry has been set to 16 (unreachable) then this router needs to notify other routers.
 
             for new_route in to_add:
@@ -231,7 +234,6 @@ class Router:
         router this means that it is a neighbour (i.e. directly connect). The directly connect neighbour is then
         added to the routing table of this router."""
         current_time = time.time()
-        print('adding neighbour')
         for port in self.output_ports:
             metric = port[1]
             destination = port[2]
@@ -242,7 +244,7 @@ class Router:
                 new_entry = {'destination_router_id': destination, 'metric': int(metric),
                              'next_router_id': "", 'flag': True, 'time': (time.time(), 0)}
                 for entry, data in self.routing_table.items():
-                    if data == new_entry:
+                    if data['destination_router_id'] == new_entry['destination_router_id']:
                         insert_entry = False
                         break
                 if insert_entry:
@@ -268,8 +270,8 @@ class Router:
                  " \n" \
                  "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
         for entry, data in self.routing_table.items():
-            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:<6} {5:<6}".format(
-                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['time'][0], data['time'][1])
+            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4}".format(
+                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['time'])
             string += "\n"
         string += "===========================================================\n"
         return string
@@ -299,15 +301,13 @@ def main():
     while True:
         router.check_timers(time.time())
 
-
-
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
 
         if (router.trigger) and (len(writeable) > 0):
             print('metric Reached 16 triggering update')
-            trigger_update(writeable)
+            router.trigger_update(writeable)
 
-        time.sleep(PERIODIC_UPDATE * randrange(8, 12, 1) / 10)
+        time.sleep(PERIODIC_UPDATE * (randrange(8, 12, 1) / 10))
         # Receive
         if len(readable) > 0:
             for readable_socket in readable:
