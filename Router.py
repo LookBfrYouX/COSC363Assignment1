@@ -313,6 +313,7 @@ def main():
             for readable_socket in readable:
                 try:
                     temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)[0]
+                    print('recieved packet')
                     response_packet = json.loads(temporary_storage.decode('utf-8'))
                     router.read_response_packet(response_packet)
                     # Print the routing table to command line to see the changes that occur when
