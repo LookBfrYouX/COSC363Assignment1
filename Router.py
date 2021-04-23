@@ -181,23 +181,23 @@ class Router:
             # checking whether packet has expired if it has set time to null then if time = null when receiving packet
             # destroy entry
             for entry, data in self.routing_table.items():
-                if data["time"][0] >= (time + PACKET_TIMEOUT):
-                    self.routing_table[entry]["time"] = (None, current_time)
+                if data["time"][0] >= (current_time + PACKET_TIMEOUT):
+                    self.routing_table[entry]["time"] = (0, current_time)
                     self.routing_table[entry]['metric'] = MAX_METRIC
-                elif data["time"][1] >= (time + GARBAGE_COLLECTION):
+                elif data["time"][1] >= (current_time + GARBAGE_COLLECTION):
                     del self.routing_table[entry]
 
                 # Updating timers from received neighbour.
                 if (packet['router_id'] == data['next_router_id']) or \
                         (packet['router_id'] == data['destination_router_id']):
-                    self.routing_table[entry]["time"] = (current_time, None)
+                    self.routing_table[entry]["time"] = (current_time, 0)
             return
         else:
             print(self.error_msg)
             print("Discarding packet...")
             return
 
-    def add_routing_table_entry(self, packet, entry_access, distance_to_next_hop, time):
+    def add_routing_table_entry(self, packet, entry_access, distance_to_next_hop, current_time):
         """
         Adds an entry to routing table for the router.
 
@@ -215,7 +215,7 @@ class Router:
 
         entry = len(self.routing_table)
         self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
-                                     'next_router_id': next_router, 'flag': True, 'time': time}
+                                     'next_router_id': next_router, 'flag': True, 'time': (current_time, 0)}
 
     def add_neighbour(self, packet):
         """During initial setup if this router receives an empty entry from another,
@@ -229,7 +229,7 @@ class Router:
             if packet['router_id'] == destination:
                 insert_entry = True
                 new_entry = {'destination_router_id': destination, 'metric': int(metric),
-                             'next_router_id': "", 'flag': True, 'time': time.time()}
+                             'next_router_id': "", 'flag': True, 'time': (time.time(), 0)}
                 for entry, data in self.routing_table.items():
                     if data == new_entry:
                         insert_entry = False
@@ -253,15 +253,19 @@ class Router:
 
     def __str__(self):
         """Returns the formatted string represent of the Router's routing table"""
-        string = "===========================================================\n" \
+        string = "=====================================================================================\n" \
                  "Routing Table: \n" \
                  " \n" \
-                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
+                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)\n"
         for entry, data in self.routing_table.items():
-            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:<6}".format(
-                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['time'])
+            timeout = time.time() - data['time'][0]
+            garbage = data['time'][1]
+
+            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:10.2f} {5:16.2f}".format(
+                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], timeout,
+                garbage)
             string += "\n"
-        string += "===========================================================\n"
+        string += "=====================================================================================\n"
         return string
 
 
