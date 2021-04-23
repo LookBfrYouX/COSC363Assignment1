@@ -129,10 +129,12 @@ class Router:
 
             trigger_update = False  # If a route becomes unreachable (metric = 16), an update needs to be triggered.
             to_add = []  # new routes to add.
+            to_delete = []  # routes to delete if inactive
             for entry_number in range(1, len(packet) - ENTRY_INDEX):
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
                 for entry, data in self.routing_table.items():
+                    current_time = time.time()
                     if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                         # If the new distance is smaller than the existing value, adopt the new route.
                         if (int(packet[entry_access]['metric']) + distance_to_next_hop) < int(data['metric']):
@@ -158,6 +160,23 @@ class Router:
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
+                        self.routing_table[entry]['timeout'] = current_time
+                        self.routing_table[entry]['garbage'] = 0.00
+
+                    current_time = time.time()
+                    # If the timeout timer exceeds the max time, garbage timer is begun.
+                    # The metric for the route is updated to 16 (unreachable)
+                    if current_time > (data['timeout'] + PACKET_TIMEOUT):
+                        self.routing_table[entry]["timeout"] = current_time
+                        self.routing_table[entry]["garbage"] = current_time
+                        self.routing_table[entry]['metric'] = MAX_METRIC
+                        trigger_update = True
+
+                    # If the garbage collection timer exceeds the max time, the route is marked for deletion from
+                    # routing table.
+                    if (current_time > (data["garbage"] + GARBAGE_COLLECTION)) and (data["garbage"] > 0):
+                        to_delete.append(entry)
+
                 # If no entry for destination is found then a new one is created.
                 if not found:
                     to_add.append((packet, entry_access, distance_to_next_hop))
@@ -165,8 +184,14 @@ class Router:
             if trigger_update:
                 self.trigger_update()
 
+            # If a route does not already exist it is added to the routing table.
+            # This is done here because otherwise the size of the routing table would change
+            # during execution of the for loop above, causing an error.
             for new_route in to_add:
                 self.add_routing_table_entry(new_route[0], new_route[1], new_route[2])
+
+            for entry in to_delete:
+                del self.routing_table[entry]
             return
         else:
             print(self.error_msg)
@@ -205,10 +230,12 @@ class Router:
         destination_router = packet[entry_access]['destination_router_id']
         next_router = packet['router_id']
         distance = int(packet[entry_access]['metric']) + distance_to_next_hop
+        current_time = time.time()
 
         entry = len(self.routing_table)
         self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
-                                     'next_router_id': next_router, 'flag': True, 'timeout': 0.00, 'garbage': 0.00}
+                                     'next_router_id': next_router, 'flag': True,
+                                     'timeout': current_time, 'garbage': 0.00}
 
     def add_neighbour(self, packet):
         """During initial setup if this router receives an empty entry from another,
@@ -217,12 +244,13 @@ class Router:
         for port in self.output_ports:
             metric = int(port[1])
             destination = port[2]
+            current_time = time.time()
 
             entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
                 insert_entry = True
                 new_entry = {'destination_router_id': destination, 'metric': metric,
-                             'next_router_id': "", 'flag': True, 'timeout': 0.00, 'garbage': 0.00}
+                             'next_router_id': "", 'flag': True, 'timeout': current_time, 'garbage': 0.00}
                 for entry, data in self.routing_table.items():
                     if data['destination_router_id'] == new_entry['destination_router_id']:
                         insert_entry = False
@@ -246,15 +274,23 @@ class Router:
 
     def __str__(self):
         """Returns the formatted string represent of the Router's routing table"""
+        current_time = time.time()
         string = "=====================================================================================\n" \
                  "Routing Table: \n" \
                  " \n" \
                  "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)\n"
+
         for entry, data in self.routing_table.items():
+            if data['garbage'] > 0:
+                garbage = current_time - data['garbage']
+            else:
+                garbage = 0.00
+
             string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:10.2f} {5:16.2f}".format(
-                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['timeout'],
-                data['garbage'])
+                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'],
+                current_time - data['timeout'], garbage)
             string += "\n"
+
         string += "=====================================================================================\n"
         return string
 
