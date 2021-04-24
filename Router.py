@@ -85,7 +85,8 @@ class Router:
         # checking whether packet has expired if it has set time to null then if time = null when receiving packet
         # destroy entry
         for entry, data in self.routing_table.items():
-            if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)):
+            if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)) \
+                    or data['metric'] == MAX_METRIC:
                 self.routing_table[entry]['time'] = (None, current_time)
                 self.routing_table[entry]['metric'] = MAX_METRIC
                 self.trigger = True
@@ -97,7 +98,7 @@ class Router:
                 # Updating timers from received neighbour.
         for i in delete:
             print(i)
-            del self.routing_table[delete[i]]
+            del self.routing_table[i]
 
         self.update_neighbour()
 
