@@ -96,7 +96,7 @@ class Router:
                 # Updating timers from received neighbour.
         for i in delete:
             print(i)
-            del self.routing_table[delete[i]]
+            del self.routing_table[i]
 
     def create_response_packet(self, destination_router_id):
         """Creates a RIP response packet based on the specifications."""
