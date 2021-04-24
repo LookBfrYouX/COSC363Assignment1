@@ -83,12 +83,12 @@ class Router:
         delete = []
         # checking whether packet has expired if it has set time to null then if time = null when receiving packet
         # destroy entry
-        for entry, data in self.routing_table.items():
+        for data in self.routing_table:
             if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)) \
                     or (data['metric'] >= MAX_METRIC and (data['garbage'] is not True)):
-                self.routing_table[entry]['time'] = (None, current_time)
-                self.routing_table[entry]['metric'] = MAX_METRIC
-                self.routing_table[entry]['garbage'] = True
+                data['time'] = (None, current_time)
+                data['metric'] = MAX_METRIC
+                data['garbage'] = True
                 self.trigger = True
                 print('Packet timeout exceeded.')
                 if data['next_router_id'] != "":
