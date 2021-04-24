@@ -94,7 +94,7 @@ class Router:
                     delete.append(data)
             if (data['time'][0] is None) and (data['time'][1] is not None) and (
                     current_time > (data['time'][1] + GARBAGE_COLLECTION)):
-                delete.append(entry)
+                delete.append(data)
                 # Updating timers from received neighbour.
         for i in delete:
             self.routing_table.remove(i)
