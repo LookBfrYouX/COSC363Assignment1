@@ -309,35 +309,41 @@ def main():
 
     router = Router(data_from_config, sockets)
     print(router)  # Print initial routing table of router (empty).
+    try:
+        while True:
+            router.check_timers(time.time())
 
-    while True:
-        router.check_timers(time.time())
+            readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
 
-        readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
+            if router.trigger and (len(writeable) > 0):
+                print('metric Reached 16 triggering update')
+                router.trigger_update(writeable)
 
-        if router.trigger and (len(writeable) > 0):
-            print('metric Reached 16 triggering update')
-            router.trigger_update(writeable)
+            time.sleep(PERIODIC_UPDATE * (randrange(8, 12, 1) / 10))
+            # Receive
+            if len(readable) > 0:
+                for readable_socket in readable:
+                    try:
+                        temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)[0]
+                        response_packet = json.loads(temporary_storage.decode('utf-8'))
+                        router.read_response_packet(response_packet)
+                        # Print the routing table to command line to see the changes that occur when
+                        # receiving a response packet.
+                    except ConnectionResetError:
+                        # Prevents the router from crashing when neighbour is not yet online.
+                        print("")
 
-        time.sleep(PERIODIC_UPDATE * (randrange(8, 12, 1) / 10))
-        # Receive
-        if len(readable) > 0:
-            for readable_socket in readable:
-                try:
-                    temporary_storage = readable_socket.recvfrom(BUFFER_SIZE)[0]
-                    response_packet = json.loads(temporary_storage.decode('utf-8'))
-                    router.read_response_packet(response_packet)
-                    # Print the routing table to command line to see the changes that occur when
-                    # receiving a response packet.
-                except ConnectionResetError:
-                    # Prevents the router from crashing when neighbour is not yet online.
-                    print("")
+            # Send
+            if len(writeable) > 0:
+                print(router)
+                print('sending routine update')
+                router.trigger_update(writeable)
 
-        # Send
-        if len(writeable) > 0:
-            print(router)
-            print('sending routine update')
-            router.trigger_update(writeable)
+    except KeyboardInterrupt:
+        print('Router Exited')
+
+
+
 
 
 main()
