@@ -94,10 +94,10 @@ class Router:
                     delete.append(data)
             if (data['time'][0] is None) and (data['time'][1] is not None) and (
                     current_time > (data['time'][1] + GARBAGE_COLLECTION)):
-                delete.append(entry)
+                delete.append(data)
                 # Updating timers from received neighbour.
-        for i in delete:
-            self.routing_table.remove(i)
+        for data_to_delete in delete:
+            self.routing_table.remove(data_to_delete)
 
         self.update_neighbour()
 
@@ -115,7 +115,7 @@ class Router:
             return self.response_packet
 
         entry_number = 1
-        for data in self.routing_table.items():
+        for data in self.routing_table:
             # Need to make a new copy of data, otherwise following operations overwrite routing table.
             data_to_send = copy.deepcopy(data)
             # Routes learnt from neighbor included in updates sent to that neighbor.
@@ -148,7 +148,7 @@ class Router:
             found_neighbour = False
             # Retrieves the metric for the distance between this router and the router which it received packet from.
             # This metric will be added to further metric calculations.
-            for data_next_hop in self.routing_table.items():
+            for data_next_hop in self.routing_table:
                 if data_next_hop['destination_router_id'] == packet['router_id']:
                     distance_to_next_hop = int(data_next_hop['metric'])
                     found_neighbour = True
@@ -165,7 +165,7 @@ class Router:
             for entry_number in range(1, len(packet) - 2):
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
-                for data in self.routing_table.items():
+                for data in self.routing_table:
                     if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
                         # If the new distance is smaller than the existing value, adopt the new route.
                         if (int(packet[entry_access]['metric']) + distance_to_next_hop) < int(data['metric']):
@@ -193,11 +193,11 @@ class Router:
                         found = True
                 # If no entry for destination is found then a new one is created.
                 if not found:
-                    print('adding new entry')
+                    print('Adding new entry')
                     if (int(packet[entry_access]['metric']) + distance_to_next_hop) < MAX_METRIC:
                         to_add.append((packet, entry_access, distance_to_next_hop))
             current_time = time.time()
-            for data in self.routing_table.items():
+            for data in self.routing_table:
                 if (packet['router_id'] == data['next_router_id']) or \
                         (packet['router_id'] == data['destination_router_id']):
                     data['time'] = (current_time, None)
