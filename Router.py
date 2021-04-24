@@ -283,15 +283,23 @@ class Router:
 
     def __str__(self):
         """Returns the formatted string represent of the Router's routing table"""
-        string = "===========================================================\n" \
+        string = "=====================================================================================\n" \
                  "Routing Table: \n" \
                  " \n" \
-                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)\n"
+                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)\n"
         for entry, data in self.routing_table.items():
-            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4}".format(
-                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], data['time'])
+            if data['time'][0] is None:
+                timeout = 0.00
+            else:
+                timeout = time.time() - data['time'][0]
+            if data['time'][1] is None:
+                garbage = 0.00
+            else:
+                garbage = time.time() - data['time'][1]
+            string += "{0:<14} {1:<12} {2:<12} {3:<8} {4:6.2f} {5:18.2f}".format(
+                data['destination_router_id'], data['metric'], data['next_router_id'], data['flag'], timeout, garbage)
             string += "\n"
-        string += "===========================================================\n"
+        string += "=====================================================================================\n"
         return string
 
 
