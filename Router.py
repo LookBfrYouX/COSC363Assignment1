@@ -139,11 +139,12 @@ class Router:
         a function is called to add that RIP entry to the routing table.
         """
         self.validate_response_packet(packet)
+        print("Incoming:", packet)
+        print("Table:", self.routing_table)
 
         if self.valid_packet:
             # Consider setup when initial routing table is empty.
-            if len(self.routing_table) == 0:
-                print(packet['entry1'])
+            if len(self.routing_table) == 0 or len(packet['entry1']) == 0:
                 self.add_neighbour(packet)  # empty
                 return
 
@@ -160,11 +161,13 @@ class Router:
             # which hasn't been added to the routing table of this router.
             # Add router to this routing table, and receive metric.
             if not found_neighbour:
-                print('adding neighbour')
+                print('Adding neighbour')
                 distance_to_next_hop = int(self.add_neighbour(packet))
 
+            print("Table:", self.routing_table)
+
             to_add = []  # new routes to add.
-            for entry_number in range(1, len(packet) - ENTRY_INDEX):
+            for entry_number in range(1, len(packet) - 2):
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
                 for entry, data in self.routing_table.items():
@@ -199,11 +202,9 @@ class Router:
                         to_add.append((packet, entry_access, distance_to_next_hop))
             current_time = time.time()
             for entry, data in self.routing_table.items():
-                print('in update time loop')
                 if (packet['router_id'] == data['next_router_id']) or \
                         (packet['router_id'] == data['destination_router_id']):
                     self.routing_table[entry]['time'] = (current_time, None)
-                    print('updated time')
             # If the metric of an entry has been set to 16 (unreachable) then this router needs to notify other routers.
 
             for new_route in to_add:
@@ -330,7 +331,7 @@ def main():
         readable, writeable, in_error = select.select(router.sockets, router.sockets, [])
 
         if router.trigger and (len(writeable) > 0):
-            print('metric Reached 16 triggering update')
+            print('Metric reached 16 triggering update.')
             router.trigger_update(writeable)
 
         time.sleep(PERIODIC_UPDATE * (randrange(8, 12, 1) / 10))
@@ -343,6 +344,7 @@ def main():
                     router.read_response_packet(response_packet)
                     # Print the routing table to command line to see the changes that occur when
                     # receiving a response packet.
+                    print(router)
                 except ConnectionResetError:
                     # Prevents the router from crashing when neighbour is not yet online.
                     print("")
@@ -350,7 +352,7 @@ def main():
         # Send
         if len(writeable) > 0:
             print(router)
-            print('sending routine update')
+            print('Sending routine update')
             router.trigger_update(writeable)
 
 
