@@ -135,10 +135,12 @@ class Router:
         a function is called to add that RIP entry to the routing table.
         """
         self.validate_response_packet(packet)
+        print("Incoming:", packet)
+        print("Table:", self.routing_table)
 
         if self.valid_packet:
             # Consider setup when initial routing table is empty.
-            if len(self.routing_table) == 0:
+            if len(self.routing_table) == 0 or len(packet['entry1']) == 0:
                 self.add_neighbour(packet)  # empty
                 return
 
@@ -157,8 +159,10 @@ class Router:
             if not found_neighbour:
                 distance_to_next_hop = int(self.add_neighbour(packet))
 
+            print("Table:", self.routing_table)
+
             to_add = []  # new routes to add.
-            for entry_number in range(1, len(packet) - ENTRY_INDEX):
+            for entry_number in range(1, len(packet) - 2):
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
                 for data in self.routing_table.items():
@@ -224,10 +228,10 @@ class Router:
         next_router = packet['router_id']
         distance = int(packet[entry_access]['metric']) + distance_to_next_hop
 
-        entry = len(self.routing_table)
-        self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
-                                     'next_router_id': next_router, 'flag': True, 'time': (current_time, None),
-                                     'garbage': False}
+        print('Adding router entry.')
+        self.routing_table.append({'destination_router_id': destination_router, 'metric': distance,
+                                   'next_router_id': next_router, 'flag': True, 'time': (current_time, None),
+                                   'garbage': False})
 
     def add_neighbour(self, packet):
         """During initial setup if this router receives an empty entry from another,
@@ -237,17 +241,16 @@ class Router:
             metric = port[1]
             destination = port[2]
 
-            entry_number = len(self.routing_table)
             if packet['router_id'] == destination:
                 insert_entry = True
                 new_entry = {'destination_router_id': destination, 'metric': int(metric),
                              'next_router_id': "", 'flag': True, 'time': (time.time(), None), 'garbage': False}
-                for entry, data in self.routing_table.items():
+                for data in self.routing_table:
                     if data['destination_router_id'] == new_entry['destination_router_id']:
                         insert_entry = False
                         break
                 if insert_entry:
-                    self.routing_table[entry_number] = new_entry
+                    self.routing_table.append(new_entry)
                     return metric
         return 0
 
@@ -257,11 +260,11 @@ class Router:
         for port in self.output_ports:
             metric = int(port[1])
             destination = port[2]
-            for entry, data in self.routing_table.items():
+            for data in self.routing_table:
                 if destination == data['destination_router_id']:
                     if (data['time'][0] is not None) and (current_time < (data['time'][0] + PACKET_TIMEOUT)):
-                        self.routing_table[entry]['metric'] = metric
-                        self.routing_table[entry]['next_router_id'] = ""
+                        data['metric'] = metric
+                        data['next_router_id'] = ""
 
     def trigger_update(self, writeable):
         for port in self.output_ports:
@@ -280,7 +283,7 @@ class Router:
                  "Routing Table: \n" \
                  " \n" \
                  "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)\n"
-        for entry, data in self.routing_table.items():
+        for data in self.routing_table:
             if data['time'][0] is None:
                 timeout = 0.00
             else:
