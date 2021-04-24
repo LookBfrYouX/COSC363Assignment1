@@ -135,8 +135,6 @@ class Router:
         a function is called to add that RIP entry to the routing table.
         """
         self.validate_response_packet(packet)
-        print("Incoming:", packet)
-        print("Table:", self.routing_table)
 
         if self.valid_packet:
             # Consider setup when initial routing table is empty.
@@ -159,8 +157,6 @@ class Router:
             if not found_neighbour:
                 distance_to_next_hop = int(self.add_neighbour(packet))
 
-            print("Table:", self.routing_table)
-
             to_add = []  # new routes to add.
             for entry_number in range(1, len(packet) - 2):
                 found = False  # Keeps track of whether entry for destination router already exists.
@@ -175,7 +171,7 @@ class Router:
                                 self.trigger = True
                             else:
                                 data['metric'] = int(packet[entry_access]['metric']) + \
-                                                                      distance_to_next_hop
+                                                 distance_to_next_hop
                             data['next_router_id'] = packet['router_id']
                             data['flag'] = True
                             # If the router from which the existing route came, then use the new metric
@@ -187,7 +183,7 @@ class Router:
                                 self.trigger = True
                             else:
                                 data['metric'] = int(packet[entry_access]['metric']) + \
-                                                                      distance_to_next_hop
+                                                 distance_to_next_hop
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
@@ -262,7 +258,7 @@ class Router:
             destination = port[2]
             for data in self.routing_table:
                 if destination == data['destination_router_id']:
-                    if (data['time'][0] is not None) and (current_time < (data['time'][0] + PACKET_TIMEOUT)):
+                    if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)):
                         data['metric'] = metric
                         data['next_router_id'] = ""
 
