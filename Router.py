@@ -65,7 +65,6 @@ class Router:
             self.error_msg = "The version field of the packet is incorrect."
         else:
             for i in range(ENTRY_INDEX, len(packet)):
-                # TODO add additional checks for content of RIP entry (optional)
                 entry = "entry" + str(i - 2)
                 if len(packet[entry]) > 0:
                     if packet[entry]['metric'] < 1 or packet[entry]['metric'] > 16:
@@ -86,16 +85,18 @@ class Router:
         # destroy entry
         for entry, data in self.routing_table.items():
             if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)) \
-                    or data['metric'] >= MAX_METRIC and (data['garbage'] is not True):
+                    or (data['metric'] >= MAX_METRIC and (data['garbage'] is not True)):
                 self.routing_table[entry]['time'] = (None, current_time)
                 self.routing_table[entry]['metric'] = MAX_METRIC
                 self.routing_table[entry]['garbage'] = True
                 self.trigger = True
-                print('Packet timeout exceeded')
+                print('Packet timeout exceeded.')
+                if data['next_router_id'] != "":
+                    delete.append(entry)
             if (data['time'][0] is None) and (data['time'][1] is not None) and (
                     current_time > (data['time'][1] + GARBAGE_COLLECTION)):
                 delete.append(entry)
-                print('delete entry')
+                print('Delete entry.')
                 # Updating timers from received neighbour.
         for i in delete:
             print(i)
