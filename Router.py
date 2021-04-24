@@ -86,9 +86,10 @@ class Router:
         # destroy entry
         for entry, data in self.routing_table.items():
             if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)) \
-                    or data['metric'] == MAX_METRIC:
+                    or data['metric'] >= MAX_METRIC and (data['garbage'] is not True):
                 self.routing_table[entry]['time'] = (None, current_time)
                 self.routing_table[entry]['metric'] = MAX_METRIC
+                self.routing_table[entry]['garbage'] = True
                 self.trigger = True
                 print('Packet timeout exceeded')
             if (data['time'][0] is None) and (data['time'][1] is not None) and (
@@ -98,6 +99,7 @@ class Router:
                 # Updating timers from received neighbour.
         for i in delete:
             print(i)
+            print(self.routing_table)
             del self.routing_table[i]
 
         self.update_neighbour()
@@ -192,7 +194,8 @@ class Router:
                         found = True
                 # If no entry for destination is found then a new one is created.
                 if not found:
-                    to_add.append((packet, entry_access, distance_to_next_hop))
+                    if (int(packet[entry_access]['metric']) + distance_to_next_hop) < MAX_METRIC:
+                        to_add.append((packet, entry_access, distance_to_next_hop))
             current_time = time.time()
             for entry, data in self.routing_table.items():
                 print('in update time loop')
@@ -230,7 +233,8 @@ class Router:
         entry = len(self.routing_table)
         print('adding router entry')
         self.routing_table[entry] = {'destination_router_id': destination_router, 'metric': distance,
-                                     'next_router_id': next_router, 'flag': True, 'time': (current_time, None)}
+                                     'next_router_id': next_router, 'flag': True, 'time': (current_time, None),
+                                     'garbage': False}
 
     def add_neighbour(self, packet):
         """During initial setup if this router receives an empty entry from another,
@@ -244,7 +248,7 @@ class Router:
             if packet['router_id'] == destination:
                 insert_entry = True
                 new_entry = {'destination_router_id': destination, 'metric': int(metric),
-                             'next_router_id': "", 'flag': True, 'time': (time.time(), None)}
+                             'next_router_id': "", 'flag': True, 'time': (time.time(), None), 'garbage': False}
                 for entry, data in self.routing_table.items():
                     if data['destination_router_id'] == new_entry['destination_router_id']:
                         insert_entry = False
