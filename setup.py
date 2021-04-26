@@ -25,7 +25,7 @@ def get_router_data(config_filename):
                 input_ports = [port.strip() for port in data['input-ports'].split(",")]
 
                 for input_port in input_ports:
-                    if 1024 > int(input_port) > 64000:
+                    if int(input_port) < 1024 or int(input_port) > 64000:
                         print('Input port outside expected range.')
                         sys.exit()
 

@@ -69,7 +69,7 @@ class Router:
                 if len(packet[entry]) > 0:
                     if packet[entry]['metric'] < 1 or packet[entry]['metric'] > 16:
                         self.valid_packet = False
-                        self.error_msg = "The metric for a RIP entry is invalid"
+                        self.error_msg = "The metric for a RIP entry is invalid."
                         break
                     else:
                         self.valid_packet = True
@@ -78,6 +78,7 @@ class Router:
                     self.valid_packet = True
                     self.error_msg = ""
                     break
+        return
 
     def check_timers(self, current_time):
         delete = []
@@ -161,9 +162,9 @@ class Router:
             for entry_number in range(1, len(packet) - 2):
                 found = False  # Keeps track of whether entry for destination router already exists.
                 entry_access = "entry" + str(entry_number)
+                metric = int(packet[entry_access]['metric']) + distance_to_next_hop
                 for data in self.routing_table:
                     if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
-                        metric = int(packet[entry_access]['metric']) + distance_to_next_hop
                         # If the new distance is smaller than the existing value, adopt the new route.
                         if metric < int(data['metric']):
                             # Update routing table
