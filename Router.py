@@ -341,8 +341,9 @@ def main():
                 print(router)
                 router.trigger_update(writeable)
 
-        except KeyboardInterrupt:
-            for socket in 
-            print('Router closed')
+    except KeyboardInterrupt:
+        for sock in sockets:
+            sock.close()
+        print('Router closed')
 
 main()
