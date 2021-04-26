@@ -190,7 +190,6 @@ class Router:
                 # If no entry for destination is found then a new one is created.
                 if not found:
                     if metric < MAX_METRIC:
-                        print('Adding new entry')
                         to_add.append((packet, entry_access, distance_to_next_hop))
             current_time = time.time()
             for data in self.routing_table:
@@ -224,7 +223,6 @@ class Router:
         next_router = packet['router_id']
         distance = int(packet[entry_access]['metric']) + distance_to_next_hop
 
-        print('Adding router entry.')
         self.routing_table.append({'destination_router_id': destination_router, 'metric': distance,
                                    'next_router_id': next_router, 'flag': True, 'time': (current_time, None),
                                    'garbage': False})
@@ -258,6 +256,7 @@ class Router:
             destination = port[2]
             for data in self.routing_table:
                 if destination == data['destination_router_id']:
+                    print(data['time'][0])
                     if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)):
                         data['metric'] = metric
                         data['next_router_id'] = ""
@@ -276,9 +275,10 @@ class Router:
     def __str__(self):
         """Returns the formatted string represent of the Router's routing table"""
         string = "=====================================================================================\n" \
-                 "Routing Table: \n" \
+                 "Routing Table: {0}\n" \
                  " \n" \
-                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)\n"
+                 "Destination  |  Metric  |  Next-Hop  |  Flag  |  Timeout(s)  |  Garbage Collection(s)" \
+                 "\n".format(self.router_id)
         for data in self.routing_table:
             if data['time'][0] is None:
                 timeout = 0.00
@@ -337,7 +337,7 @@ def main():
                         # Prevents the router from crashing when neighbour is not yet online.
                         print("")
 
-        # Send
+            # Send
             if len(writeable) > 0:
                 print(router)
                 router.trigger_update(writeable)
@@ -345,6 +345,7 @@ def main():
     except KeyboardInterrupt:
         for sock in sockets:
             sock.close()
-        print('Router closed')
+        print('\nRouter closed')
+
 
 main()
