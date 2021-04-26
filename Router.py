@@ -96,7 +96,8 @@ class Router:
             if (data['time'][0] is None) and (data['time'][1] is not None) and (
                     current_time > (data['time'][1] + GARBAGE_COLLECTION)):
                 delete.append(data)
-                # Updating timers from received neighbour.
+            if (data['metric'] == MAX_METRIC) and (data['garbage'] is True) and (data['time'][1] is None):
+                delete.append(data)
         for data_to_delete in delete:
             self.routing_table.remove(data_to_delete)
 
@@ -256,7 +257,6 @@ class Router:
             destination = port[2]
             for data in self.routing_table:
                 if destination == data['destination_router_id']:
-                    print(data['time'][0])
                     if (data['time'][0] is not None) and (current_time > (data['time'][0] + PACKET_TIMEOUT)):
                         data['metric'] = metric
                         data['next_router_id'] = ""
