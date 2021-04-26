@@ -25,7 +25,7 @@ def get_router_data(config_filename):
                 input_ports = [port.strip() for port in data['input-ports'].split(",")]
 
                 for input_port in input_ports:
-                    if 1024 >= int(input_port) >= 64000:
+                    if 1024 > int(input_port) > 64000:
                         print('Input port outside expected range.')
                         sys.exit()
 
@@ -35,14 +35,13 @@ def get_router_data(config_filename):
                     output_ports.append(port.split("-"))
 
                 for data in output_ports:
-                    if len(data) == 3 and (1024 <= int(data[0]) <= 64000):
-                        return router_id, input_ports, output_ports
+                    if len(data) != 3:
+                        print('Output port not in expected format.')
+                        sys.exit()
                     elif int(data[0]) < 1024 or int(data[0]) > 64000:
                         print('Output port not in expected format.')
                         sys.exit()
-                    else:
-                        print('Output port not in expected format.')
-                        sys.exit()
+                return router_id, input_ports, output_ports
             else:
                 print('Router id outside expected range.')
                 sys.exit()

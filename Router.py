@@ -163,34 +163,33 @@ class Router:
                 entry_access = "entry" + str(entry_number)
                 for data in self.routing_table:
                     if data['destination_router_id'] == packet[entry_access]['destination_router_id']:
+                        metric = int(packet[entry_access]['metric']) + distance_to_next_hop
                         # If the new distance is smaller than the existing value, adopt the new route.
-                        if (int(packet[entry_access]['metric']) + distance_to_next_hop) < int(data['metric']):
+                        if metric < int(data['metric']):
                             # Update routing table
-                            if (int(packet[entry_access]['metric']) + distance_to_next_hop) > 16:
+                            if metric > MAX_METRIC:
                                 data['metric'] = MAX_METRIC
                                 self.trigger = True
                             else:
-                                data['metric'] = int(packet[entry_access]['metric']) + \
-                                                 distance_to_next_hop
+                                data['metric'] = metric
                             data['next_router_id'] = packet['router_id']
                             data['flag'] = True
                             # If the router from which the existing route came, then use the new metric
                             # even if it is larger than the old one.
                         elif data['next_router_id'] == packet['router_id']:
                             data['flag'] = True
-                            if (int(packet[entry_access]['metric']) + distance_to_next_hop) > 16:
+                            if metric > MAX_METRIC:
                                 data['metric'] = MAX_METRIC
                                 self.trigger = True
                             else:
-                                data['metric'] = int(packet[entry_access]['metric']) + \
-                                                 distance_to_next_hop
+                                data['metric'] = metric
                         # Entry found for destination router so set to true
                         # (data['destination_router_id'] == packet[entry_access]['router_id'])
                         found = True
                 # If no entry for destination is found then a new one is created.
                 if not found:
-                    print('Adding new entry')
-                    if (int(packet[entry_access]['metric']) + distance_to_next_hop) < MAX_METRIC:
+                    if metric < MAX_METRIC:
+                        print('Adding new entry')
                         to_add.append((packet, entry_access, distance_to_next_hop))
             current_time = time.time()
             for data in self.routing_table:
